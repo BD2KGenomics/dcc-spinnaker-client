@@ -14,6 +14,11 @@ Second, this repo contains a `spinnaker.py` script that takes a TSV format and c
 
 We use [HubFlow](https://datasift.github.io/gitflow/GitFlowForGitHub.html) for our feature branch/release process.
 
+* `master` is the stable release branch
+* `develop` is the unstable branch
+* make features on feature branches
+* candidate release branches are created right before a release 
+
 ## Install
 
 ### Ubuntu 14.04
