@@ -17,7 +17,7 @@ We use [HubFlow](https://datasift.github.io/gitflow/GitFlowForGitHub.html) for o
 * `master` is the stable release branch
 * `develop` is the unstable branch
 * make features on feature branches
-* candidate release branches are created right before a release 
+* candidate release branches are created right before a release
 
 ## Install
 
@@ -55,6 +55,8 @@ Alternatively, you may want to use Conda, see [here](http://conda.pydata.org/doc
 
 ## Generate Test Metadata (and Optionally Upload Data to Storage Service)
 
+First, create a file for your access token e.g. `accessToken`.
+
 We need to create a bunch of JSON documents for multiple donors and multiple
 experimental designs and file upload types.  To do that we (Chris) developed a very simple
 TSV to JSON tool and this will ultimately form the basis of our helper applications
@@ -65,7 +67,7 @@ that clients will use in the field to prepare their samples.
 		--metadata-schema schemas/metadata_schema.json \
 		--output-dir output_metadata \
 		--receipt-file receipt.tsv \
-		--storage-access-token `cat ucsc-storage-client/accessToken` \
+		--storage-access-token `cat accessToken` \
 		--skip-upload \
 		sample_tsv/sample.tsv
 
@@ -92,6 +94,7 @@ mind if you're just testing the metadata components and don't want to create a t
 the fact data linked to from the `sample.tsv` the program and project will both be TEST which should make
 it easy to avoid in the future. The file is based on [this](https://docs.google.com/spreadsheets/d/13fqil92C-Evi-4cy_GTnzNMmrD0ssuSCx3-cveZ4k70/edit?usp=sharing) google doc.
 
+**NOTE:** you may need to modify the storage and metadata service URLs used via the `--metadata-server-url` and `--storage-server-url` parameters if you are using a non-production storage system. 
 
 ## Data Types
 
