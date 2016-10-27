@@ -10,6 +10,10 @@ First, there are JSON schema, see `analysis_flattened.json` and `biospecimen_fla
 
 Second, this repo contains a `spinnaker.py` script that takes a TSV format and converts it into metadata JSON documents (and also has an option for uploading, we use this for bulk uploads to our system).
 
+## Git Process
+
+We use [HubFlow](https://datasift.github.io/gitflow/GitFlowForGitHub.html) for our feature branch/release process.
+
 ## Install
 
 ### Ubuntu 14.04
@@ -52,8 +56,8 @@ TSV to JSON tool and this will ultimately form the basis of our helper applicati
 that clients will use in the field to prepare their samples.
 
     python spinnaker.py \
-		--input-metadata-schema input_metadata.json \
-		--metadata-schema metadata_schema.json \
+		--input-metadata-schema schemas/input_metadata.json \
+		--metadata-schema schemas/metadata_schema.json \
 		--output-dir output_metadata \
 		--receipt-file receipt.tsv \
 		--storage-access-token `cat ucsc-storage-client/accessToken` \
