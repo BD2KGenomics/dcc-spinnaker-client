@@ -90,3 +90,4 @@ ENV/
 
 # project specific
 output_metadata
+ucsc-storage-client
