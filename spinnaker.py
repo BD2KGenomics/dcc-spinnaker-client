@@ -3,8 +3,8 @@
 #
 # See "helper client" in https://ucsc-cgl.atlassian.net/wiki/display/DEV/Storage+Service+-+Functional+Spec
 #
-# The upload portion of this script requires external java8 jars and other files from the private S3 bucket at <https://s3-us-west-2.amazonaws.com/beni-dcc-storage-dev/ucsc-storage-client.tar.gz>
-# MAY2016	chrisw
+# Original author: Chris Wong
+# Edited by: Teo Fleming (updated to work in Dockerized Spinnaker client)
 
 # imports
 import logging
@@ -39,8 +39,6 @@ def getOptions():
     description_text.append("3- Each data bundle upload is registered with the server. A manifest.txt file is generated in this step.")
     description_text.append("4- Each data bundle upload is uploaded to the server.")
     description_text.append("5- Newly assigned UUIDs for the upload are recorded in an upload receipt file.")
-    description_text.append("The ucsc-storage-client directory must be installed in the same directory that this tool is run.")
-
 
     parser = OptionParser(usage="\n".join(usage_text), description="\n".join(description_text))
     parser.add_option("-v", "--verbose", action="store_true", default=False, dest="verbose", help="Switch for verbose mode.")
@@ -439,8 +437,8 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
      """
      success = True
 
-     metadataClientJar = "ucsc-storage-client/dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar"
-     trustStore = "ucsc-storage-client/ssl/cacerts"
+     metadataClientJar = "/dcc-metadata-client/lib/dcc-metadata-client.jar"
+     trustStore = "/ssl/cacerts"
      trustStorePw = "changeit"
 
      # build command string
@@ -485,8 +483,8 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=F
     """
     success = True
 
-    storageClientJar = "ucsc-storage-client/icgc-storage-client-1.0.14-SNAPSHOT/lib/icgc-storage-client.jar"
-    trustStore = "ucsc-storage-client/ssl/cacerts"
+    storageClientJar = "/icgc-storage-client/lib/icgc-storage-client.jar"
+    trustStore = "/ssl/cacerts"
     trustStorePw = "changeit"
 
     # build command string
@@ -771,8 +769,8 @@ def main():
             fileDataList = getDataDictFromXls(fileName)
         except Exception as exc:
             # attempt to process as tsv file
-            logging.info("couldn't read %s as excel file" % fileName)
-            logging.info("---now trying to read as tsv file")
+            # logging.info("couldn't read %s as excel file" % fileName)
+            # logging.info("---now trying to read as tsv file")
             fileLines = readFileLines(fileName)
             reader = readTsv(fileLines)
             fileDataList = processFieldNames(reader)
