@@ -53,8 +53,8 @@ def getOptions():
     parser.add_option("-r", "--receipt-file", action="store", default="receipt.tsv", type="string", dest="receiptFile", help="receipt file name. This tsv file is the receipt of the upload, with UUIDs filled in.")
 
     parser.add_option("--storage-access-token", action="store", default="NA", type="string", dest="awsAccessToken", help="access token for AWS looks something like 12345678-abcd-1234-abcdefghijkl.")
-    parser.add_option("--metadata-server-url", action="store", default="https://storage.ucsc-cgl.org:8444", type="string", dest="metadataServerUrl", help="URL for metadata server.")
-    parser.add_option("--storage-server-url", action="store", default="https://storage.ucsc-cgl.org:5431", type="string", dest="storageServerUrl", help="URL for storage server.")
+    parser.add_option("--metadata-server-url", action="store", default="https://storage2.ucsc-cgl.org:8444", type="string", dest="metadataServerUrl", help="URL for metadata server.")
+    parser.add_option("--storage-server-url", action="store", default="https://storage2.ucsc-cgl.org:5431", type="string", dest="storageServerUrl", help="URL for storage server.")
     parser.add_option("--force-upload", action="store_true", default=False, dest="force_upload", help="Switch to force upload in case object ID already exists remotely. Overwrites existing bundle.")
 
     (options, args) = parser.parse_args()
@@ -428,7 +428,7 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
      java
          -Djavax.net.ssl.trustStore=ssl/cacerts
          -Djavax.net.ssl.trustStorePassword=changeit
-         -Dserver.baseUrl=https://storage.ucsc-cgl.org:8444
+         -Dserver.baseUrl=https://storage2.ucsc-cgl.org:8444
          -DaccessToken=${accessToken}
          -jar dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar
          -i ${upload}
@@ -473,10 +473,10 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=F
     Java
         -Djavax.net.ssl.trustStore=ssl/cacerts
         -Djavax.net.ssl.trustStorePassword=changeit
-        -Dmetadata.url=https://storage.ucsc-cgl.org:8444
+        -Dmetadata.url=https://storage2.ucsc-cgl.org:8444
         -Dmetadata.ssl.enabled=true
         -Dclient.ssl.custom=false
-        -Dstorage.url=https://storage.ucsc-cgl.org:5431
+        -Dstorage.url=https://storage2.ucsc-cgl.org:5431
         -DaccessToken=${accessToken}
         -jar icgc-storage-client-1.0.14-SNAPSHOT/lib/icgc-storage-client.jar upload
         --manifest ${manifest}/manifest.txt
