@@ -25,7 +25,7 @@ We use [HubFlow](https://datasift.github.io/gitflow/GitFlowForGitHub.html) for o
 
 You need to make sure you have system level dependencies installed in the appropriate way for your OS.  For Ubuntu 14.04 you do:
 
-    sudo apt-get install python-dev libxml2-dev libxslt-dev lib32z1-dev
+    sudo apt-get install python-dev libxml2-dev libxslt-dev lib32z1-dev python-setuptools build-essential
 
 ### Python
 
