@@ -437,8 +437,9 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
      """
      success = True
 
-     metadataClientJar = "/dcc-metadata-client/lib/dcc-metadata-client.jar"
-     trustStore = "/ssl/cacerts"
+     #metadataClientJar = "/dcc-metadata-client/lib/dcc-metadata-client.jar"
+     metadataClientJar = "ucsc-storage-client/dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar"
+     trustStore = "ucsc-storage-client/ssl/cacerts"
      trustStorePw = "changeit"
 
      # build command string
@@ -483,8 +484,9 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=F
     """
     success = True
 
-    storageClientJar = "/icgc-storage-client/lib/icgc-storage-client.jar"
-    trustStore = "/ssl/cacerts"
+    #storageClientJar = "/icgc-storage-client/lib/icgc-storage-client.jar"
+    storageClientJar = "ucsc-storage-client/icgc-storage-client-1.0.14-SNAPSHOT/lib/icgc-storage-client.jar"
+    trustStore = "ucsc-storage-client/ssl/cacerts"
     trustStorePw = "changeit"
 
     # build command string
