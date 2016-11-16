@@ -7,15 +7,18 @@ RUN apt-get update && apt-get install -y --force-yes \
     build-essential \
     libxml2-dev \
     libxslt-dev \
-    lib32z1-dev
+    lib32z1-dev \
+    libffi-dev \
+    libssl-dev
 
-RUN easy_install pip
+# RUN easy_install pip
 
 # skip virtualenv stuff because we're in a Dockerfile
 # RUN pip install virtualenv
 # RUN virtualenv env
 # RUN source env/bin/activate
 
+RUN pip install pip --upgrade
 RUN pip install \
     jsonschema \
     jsonmerge \
@@ -28,7 +31,7 @@ RUN pip install \
 
 # requests security per:
 # http://stackoverflow.com/questions/29099404/ssl-insecureplatform-error-when-using-requests-package
-RUN pip install 'requests[security]'
+RUN pip install requests[security]==2.12.1
 
 # Install Java
 # NOTE: software-properties-common allows us to do add-apt-repository

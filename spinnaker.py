@@ -1,12 +1,10 @@
-# spinnaker.py
-# Generate and upload UCSC Core Genomics data bundles from information passed via excel or tsv file.
-#
-# See "helper client" in https://ucsc-cgl.atlassian.net/wiki/display/DEV/Storage+Service+-+Functional+Spec
-#
-# Original author: Chris Wong
-# Edited by: Teo Fleming (updated to work in Dockerized Spinnaker client)
+"""
+spinnaker.py
+Generate and upload UCSC Core Genomics data bundles from information passed via excel or tsv file.
 
-# imports
+See "helper client" in:
+https://ucsc-cgl.atlassian.net/wiki/display/DEV/Storage+Service+-+Functional+Spec
+"""
 import logging
 from optparse import OptionParser
 import sys
@@ -21,8 +19,8 @@ import subprocess
 import datetime
 import copy
 import semver
+import requests
 
-# methods and functions
 
 def getOptions():
     """
@@ -55,6 +53,9 @@ def getOptions():
     parser.add_option("--storage-access-token", action="store", default="NA", type="string", dest="awsAccessToken", help="access token for AWS looks something like 12345678-abcd-1234-abcdefghijkl.")
     parser.add_option("--metadata-server-url", action="store", default="https://storage2.ucsc-cgl.org:8444", type="string", dest="metadataServerUrl", help="URL for metadata server.")
     parser.add_option("--storage-server-url", action="store", default="https://storage2.ucsc-cgl.org:5431", type="string", dest="storageServerUrl", help="URL for storage server.")
+    parser.add_option("--submission-server-url", action="store",
+                      default="http://storage2.ucsc-cgl.org:8460", type="string",
+                      dest="submissionServerUrl", help="URL for submission server.")
     parser.add_option("--force-upload", action="store_true", default=False, dest="force_upload", help="Switch to force upload in case object ID already exists remotely. Overwrites existing bundle.")
 
     (options, args) = parser.parse_args()
@@ -828,6 +829,11 @@ def main():
     counts["failedUploads"] = []
     counts["bundlesUploaded"] = 0
 
+    r = requests.post(options.submissionServerUrl + "/v0/submissions", json={})
+    submission_id = json.loads(r.text)["submission"]["id"]
+    logging.info("You can monitor the upload at {}/v0/submissions/{}".format(
+        options.submissionServerUrl, submission_id))
+
     # first pass uploads data bundles
     for dirName, subdirList, fileList in os.walk(options.metadataOutDir):
         if dirName == options.metadataOutDir:
@@ -886,6 +892,13 @@ def main():
 
     receiptFilePath = os.path.join(options.metadataOutDir, options.receiptFile)
     writeReceipt(collectedReceipts, receiptFilePath)
+
+    # Sent the receipt to the submission server
+    with open(receiptFilePath) as f:
+        r = requests.put(options.submissionServerUrl + "/v0/submissions/{}".format(submission_id),
+                         json={"receipt": f.read()})
+        logging.info("You can view the receipt at {}/v0/submissions/{}".format(
+            options.submissionServerUrl, submission_id))
 
     # final console output
     if len(counts["failedRegistration"]) > 0 or len(counts["failedUploads"]) > 0:
