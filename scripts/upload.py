@@ -21,6 +21,7 @@ import datetime
 import copy
 import semver
 import requests
+import dateutil
 
 
 def getOptions():
@@ -32,36 +33,55 @@ def getOptions():
     usage_text.append("Data will be read from 'Sheet1' in the case of Excel file.")
 
     description_text = []
-    description_text.append("This is the data upload tool for UCSC-CGL. The following steps are performed to successfully upload data to the UCSC-CGL servers:")
-    description_text.append("1- Data bundles are generated from the input files.")
-    description_text.append("2- The newly generated metadata.json files are validated.")
-    description_text.append("3- Each data bundle upload is registered with the server. A manifest.txt file is generated in this step.")
-    description_text.append("4- Each data bundle upload is uploaded to the server.")
-    description_text.append("5- Newly assigned UUIDs for the upload are recorded in an upload receipt file.")
+    description_text.append("Upload client for UCSC DCC")
+    description_text.append("Performs the following operations:")
+    description_text.append("1 Generates data bundles for the input files")
+    description_text.append("2 Validates the metadata generates")
+    description_text.append("3 Registers the data bundles with the server")
+    description_text.append("4 Uploads the files")
+    description_text.append("5 Returns receipt with UUIDs for all uploaded files")
 
     parser = OptionParser(usage="\n".join(usage_text), description="\n".join(description_text))
-    parser.add_option("-v", "--verbose", action="store_true", default=False, dest="verbose", help="Switch for verbose mode.")
-    parser.add_option("-s", "--skip-upload", action="store_true", default=False, dest="skip_upload", help="Switch to skip upload. Metadata files will be generated only.")
-    parser.add_option("-t", "--test", action="store_true", default=False, dest="test", help="Switch for development testing.")
-
-    parser.add_option("-i", "--input-metadata-schema", action="store", default="schemas/input_metadata.json", type="string", dest="inputMetadataSchemaFileName", help="flattened json schema file for input metadata")
-    parser.add_option("-m", "--metadata-schema", action="store", default="schemas/metadata_schema.json", type="string", dest="metadataSchemaFileName", help="flattened json schema file for metadata")
-
-    parser.add_option("-d", "--output-dir", action="store", default="/outputs", type="string", dest="metadataOutDir", help="output directory. In the case of colliding file names, the older file will be overwritten.")
-
-    parser.add_option("-r", "--receipt-file", action="store", default="receipt.tsv", type="string", dest="receiptFile", help="receipt file name. This tsv file is the receipt of the upload, with UUIDs filled in.")
-
-    parser.add_option("--storage-access-token", action="store", default="NA", type="string", dest="awsAccessToken", help="access token for AWS looks something like 12345678-abcd-1234-abcdefghijkl.")
-    parser.add_option("--metadata-server-url", action="store", default="https://storage2.ucsc-cgl.org:8444", type="string", dest="metadataServerUrl", help="URL for metadata server.")
-    parser.add_option("--storage-server-url", action="store", default="https://storage2.ucsc-cgl.org:5431", type="string", dest="storageServerUrl", help="URL for storage server.")
+    parser.add_option("-v", "--verbose", action="store_true", default=False, dest="verbose",
+                      help="Switch for verbose mode.")
+    parser.add_option("-s", "--skip-upload", action="store_true", default=False, dest="skip_upload",
+                      help="Switch to skip upload. Metadata files will be generated only.")
+    parser.add_option("-t", "--test", action="store_true", default=False, dest="test",
+                      help="Switch for development testing.")
+    parser.add_option("-i", "--input-metadata-schema", action="store",
+                      default="schemas/input_metadata.json", type="string",
+                      dest="inputMetadataSchemaFileName",
+                      help="flattened json schema file for input metadata")
+    parser.add_option("-m", "--metadata-schema", action="store",
+                      default="schemas/metadata_schema.json", type="string",
+                      dest="metadataSchemaFileName",
+                      help="flattened json schema file for metadata")
+    parser.add_option("-d", "--output-dir", action="store", default="/outputs", type="string",
+                      dest="metadataOutDir",
+                      help="output directory. Existing files will be overwritten.")
+    parser.add_option("-r", "--receipt-file", action="store", default="receipt.tsv", type="string",
+                      dest="receiptFile",
+                      help="receipt file name. Includes UUID for all uploaded files")
+    parser.add_option("--storage-access-token", action="store", default="NA", type="string",
+                      dest="awsAccessToken",
+                      help="access token for AWS (12345678-abcd-1234-abcdefghijkl.)")
+    parser.add_option("--metadata-server-url", action="store",
+                      default="https://storage2.ucsc-cgl.org:8444",
+                      type="string", dest="metadataServerUrl", help="URL for metadata server.")
+    parser.add_option("--storage-server-url", action="store",
+                      default="https://storage2.ucsc-cgl.org:5431", type="string",
+                      dest="storageServerUrl", help="URL for storage server.")
     parser.add_option("--submission-server-url", action="store",
                       default="http://storage2.ucsc-cgl.org:8460", type="string",
                       dest="submissionServerUrl", help="URL for submission server.")
-    parser.add_option("--force-upload", action="store_true", default=False, dest="force_upload", help="Switch to force upload in case object ID already exists remotely. Overwrites existing bundle.")
+    parser.add_option("--force-upload", action="store_true", default=False,
+                      dest="force_upload",
+                      help="Force upload if object exists remotely. Overwrites existing bundle.")
 
     (options, args) = parser.parse_args()
 
     return (options, args, parser)
+
 
 def jsonPP(obj):
     """
@@ -69,6 +89,7 @@ def jsonPP(obj):
     """
     str = json.dumps(obj, indent=4, separators=(',', ': '), sort_keys=True)
     return str
+
 
 def getNow():
     """
@@ -78,6 +99,7 @@ def getNow():
     now = datetime.datetime.utcnow()
     return now
 
+
 def getTimeDelta(startDatetime):
     """
     get a timedelta object. Get seconds elapsed with timedelta.total_seconds().
@@ -85,6 +107,7 @@ def getTimeDelta(startDatetime):
     endDatetime = datetime.datetime.utcnow()
     timedeltaObj = endDatetime - startDatetime
     return timedeltaObj
+
 
 def loadJsonObj(fileName):
     """
@@ -94,9 +117,10 @@ def loadJsonObj(fileName):
         file = open(fileName, "r")
         object = json.load(file)
         file.close()
-    except Exception as exc:
+    except:
         logging.exception("loadJsonObj")
     return object
+
 
 def loadJsonSchema(fileName):
     """
@@ -104,6 +128,7 @@ def loadJsonSchema(fileName):
     """
     schema = loadJsonObj(fileName)
     return schema
+
 
 def validateObjAgainstJsonSchema(obj, schema):
     """
@@ -115,6 +140,7 @@ def validateObjAgainstJsonSchema(obj, schema):
         logging.error("jsonschema.validate FAILED in validateObjAgainstJsonSchema: %s" % (str(exc)))
         return False
     return True
+
 
 def readFileLines(filename, strip=True):
     """
@@ -129,12 +155,14 @@ def readFileLines(filename, strip=True):
     file.close()
     return fileLines
 
+
 def readTsv(fileLines, d="\t"):
     """
     convenience method for reading TSV file lines into csv.DictReader obj.
     """
     reader = csv.DictReader(fileLines, delimiter=d)
     return reader
+
 
 def normalizePropertyName(inputStr):
     """
@@ -144,6 +172,7 @@ def normalizePropertyName(inputStr):
     newStr = newStr.replace(" ", "_")
     newStr = newStr.strip()
     return newStr
+
 
 def processFieldNames(dictReaderObj):
     """
@@ -158,6 +187,7 @@ def processFieldNames(dictReaderObj):
             newDict[newKey] = dict[key]
     return newDataList
 
+
 def generateUuid5(nameComponents, namespace=uuid.NAMESPACE_URL):
     """
     generate a uuid5 where the name is the lower case of concatenation of nameComponents
@@ -169,6 +199,7 @@ def generateUuid5(nameComponents, namespace=uuid.NAMESPACE_URL):
     name = "".join(strings).lower()
     id = str(uuid.uuid5(namespace, name))
     return id
+
 
 def setUuids(dataObj):
     """
@@ -207,6 +238,7 @@ def setUuids(dataObj):
             keyList.append(dataObj[field])
     id = generateUuid5(keyList)
     dataObj["workflow_uuid"] = id
+
 
 def getDataObj(dict, schema):
     """
@@ -252,7 +284,7 @@ def getDataDictFromXls(fileName, sheetName="Sheet1"):
     for colIdx in xrange(len(headerRow)):
         cell = headerRow[colIdx]
         value = cell.value
-        if (value != None):
+        if (value is not None):
             colMapping[colIdx] = normalizePropertyName(value)
 
     # build up list of row data objs
@@ -266,6 +298,7 @@ def getDataDictFromXls(fileName, sheetName="Sheet1"):
             rowDict[colName] = value
 
     return data
+
 
 def ln_s(file_path, link_path):
     """
@@ -287,6 +320,7 @@ def ln_s(file_path, link_path):
             raise
     return None
 
+
 def mkdir_p(path):
     """
     mkdir -p
@@ -300,12 +334,12 @@ def mkdir_p(path):
             raise
     return None
 
+
 def getWorkflowObjects(flatMetadataObjs):
     """
     For each flattened metadata object, build up a metadataObj with correct structure.
     """
     schema_version = "0.0.3"
-    num_files_written = 0
 
     commonObjMap = {}
     for metaObj in flatMetadataObjs:
@@ -352,7 +386,7 @@ def getWorkflowObjects(flatMetadataObjs):
 
         # retrieve workflow
         workflowObj = commonObjMap[workflow_uuid]
-        analysis_type = metaObj["analysis_type"]
+        # analysis_type = metaObj["analysis_type"]
         wf_outputsObj = workflowObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_outputs"]
 
         # add file info
@@ -362,6 +396,7 @@ def getWorkflowObjects(flatMetadataObjs):
         fileInfoObj["file_path"] = metaObj["file_path"]
 
     return commonObjMap
+
 
 def writeJson(directory, fileName, jsonObj):
     """
@@ -375,12 +410,13 @@ def writeJson(directory, fileName, jsonObj):
         file = open(filePath, 'w')
         json.dump(jsonObj, file, indent=4, separators=(',', ': '), sort_keys=True)
         success = 1
-    except Exception as exc:
+    except:
         logging.exception("ERROR writing %s/%s" % (directory, fileName))
         success = 0
     finally:
         file.close()
     return success
+
 
 def writeDataBundleDirs(structuredMetaDataObjMap, outputDir):
     """
@@ -398,7 +434,8 @@ def writeDataBundleDirs(structuredMetaDataObjMap, outputDir):
         workflow_outputs = metaObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_outputs"]
         for outputObj in workflow_outputs:
             file_path = outputObj["file_path"]
-            # so I'm editing the file path here since directory structures are stripped out upon upload
+            # so I'm editing the file path here since directory
+            # structures are stripped out upon upload
             file_name_array = file_path.split("/")
             outputObj["file_path"] = file_name_array[-1]
             fullFilePath = os.path.join(os.getcwd(), file_path)
@@ -411,6 +448,7 @@ def writeDataBundleDirs(structuredMetaDataObjMap, outputDir):
         numFilesWritten += writeJson(bundlePath, "metadata.json", metaObj)
 
     return numFilesWritten
+
 
 def setupLogging(logfileName, logFormat, logLevel, logToConsole=True):
     """
@@ -426,51 +464,54 @@ def setupLogging(logfileName, logFormat, logLevel, logToConsole=True):
         logging.getLogger('').addHandler(console)
     return None
 
+
 def registerBundleUpload(metadataUrl, bundleDir, accessToken):
-     """
-     java
-         -Djavax.net.ssl.trustStore=ssl/cacerts
-         -Djavax.net.ssl.trustStorePassword=changeit
-         -Dserver.baseUrl=https://storage2.ucsc-cgl.org:8444
-         -DaccessToken=${accessToken}
-         -jar dcc-metadata-client/lib/dcc-metadata-client.jar
-         -i ${upload}
-         -o ${manifest}
-         -m manifest.txt
-     """
-     success = True
+    """
+    java
+     -Djavax.net.ssl.trustStore=ssl/cacerts
+     -Djavax.net.ssl.trustStorePassword=changeit
+     -Dserver.baseUrl=https://storage2.ucsc-cgl.org:8444
+     -DaccessToken=${accessToken}
+     -jar dcc-metadata-client/lib/dcc-metadata-client.jar
+     -i ${upload}
+     -o ${manifest}
+     -m manifest.txt
+    """
+    success = True
 
-     metadataClientJar = "dcc-metadata-client/lib/dcc-metadata-client.jar"
-     trustStore = "ssl/cacerts"
-     trustStorePw = "changeit"
+    metadataClientJar = "dcc-metadata-client/lib/dcc-metadata-client.jar"
+    trustStore = "ssl/cacerts"
+    trustStorePw = "changeit"
 
-     # build command string
-     command = ["java"]
-     command.append("-Djavax.net.ssl.trustStore=" + trustStore)
-     command.append("-Djavax.net.ssl.trustStorePassword=" + trustStorePw)
-     command.append("-Dserver.baseUrl=" + str(metadataUrl))
-     command.append("-DaccessToken=" + str(accessToken))
-     command.append("-jar " + metadataClientJar)
-     command.append("-i " + str(bundleDir))
-     command.append("-o " + str(bundleDir))
-     command.append("-m manifest.txt")
-     command = " ".join(command)
+    # build command string
+    command = ["java"]
+    command.append("-Djavax.net.ssl.trustStore=" + trustStore)
+    command.append("-Djavax.net.ssl.trustStorePassword=" + trustStorePw)
+    command.append("-Dserver.baseUrl=" + str(metadataUrl))
+    command.append("-DaccessToken=" + str(accessToken))
+    command.append("-jar " + metadataClientJar)
+    command.append("-i " + str(bundleDir))
+    command.append("-o " + str(bundleDir))
+    command.append("-m manifest.txt")
+    command = " ".join(command)
 
-     # !!! This may expose the access token !!!
-     logging.debug("register upload command:\t%s" % (command))
+    # !!! This may expose the access token !!!
+    logging.debug("register upload command:\t%s" % (command))
 
-     try:
-         logging.debug(command)
-         output = subprocess.check_output(command, cwd=os.getcwd(), stderr=subprocess.STDOUT, shell=True)
-     except Exception as exc:
-         success = False
-         # !!! logging.exception here may expose access token !!!
-         logging.error("ERROR while registering bundle %s" % bundleDir)
-         writeJarExceptionsToLog(exc.output)
-     finally:
-         logging.info("done registering bundle upload %s" % bundleDir)
+    try:
+        logging.debug(command)
+        subprocess.check_output(command, cwd=os.getcwd(),
+                                stderr=subprocess.STDOUT, shell=True)
+    except Exception as exc:
+        success = False
+        # !!! logging.exception here may expose access token !!!
+        logging.error("ERROR while registering bundle %s" % bundleDir)
+        writeJarExceptionsToLog(exc.output)
+    finally:
+        logging.info("done registering bundle upload %s" % bundleDir)
 
-     return success
+    return success
+
 
 def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=False):
     """
@@ -514,7 +555,8 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=F
 #     logging.debug("perform upload command:\t%s" % (command))
 
     try:
-        output = subprocess.check_output(command, cwd=os.getcwd(), stderr=subprocess.STDOUT, shell=True)
+        subprocess.check_output(command, cwd=os.getcwd(),
+                                stderr=subprocess.STDOUT, shell=True)
     except subprocess.CalledProcessError as exc:
         success = False
         # !!! logging.exception here may expose access token !!!
@@ -524,6 +566,7 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=F
         logging.info("done uploading bundle %s" % bundleDir)
 
     return success
+
 
 def writeJarExceptionsToLog(errorOutput):
     """
@@ -535,6 +578,7 @@ def writeJarExceptionsToLog(errorOutput):
             logging.error(line)
     return None
 
+
 def parseUploadManifestFile(manifestFilePath):
     '''
     from the upload manifest file, get the file_uuid for each uploaded file
@@ -544,7 +588,7 @@ def parseUploadManifestFile(manifestFilePath):
 
     fileLines = readFileLines(manifestFilePath)
     for line in fileLines:
-        if bundle_uuid == None:
+        if bundle_uuid is None:
             # first line contains bundle_uuid
             fields = line.split(" ")
             bundle_uuid = fields[-1]
@@ -557,15 +601,17 @@ def parseUploadManifestFile(manifestFilePath):
             fileName = os.path.basename(fields[1])
             idMapping[fileName] = fields[0]
 
-    obj = {"bundle_uuid":bundle_uuid, "idMapping":idMapping}
+    obj = {"bundle_uuid": bundle_uuid, "idMapping": idMapping}
     return obj
 
+
 def collectReceiptData(manifestData, metadataObj):
-    '''
-    collect the data for the upload receipt file
-    The required fields are:
-    program project center_name submitter_donor_id donor_uuid submitter_specimen_id specimen_uuid submitter_specimen_type submitter_sample_id sample_uuid analysis_type workflow_name workflow_version file_type file_path file_uuid bundle_uuid metadata_uuid
-    '''
+    """
+    collect the data for the upload receipt file The required fields are: program project
+    center_name submitter_donor_id donor_uuid submitter_specimen_id specimen_uuid
+    submitter_specimen_type submitter_sample_id sample_uuid analysis_type workflow_name
+    workflow_version file_type file_path file_uuid bundle_uuid metadata_uuid
+    """
     collectedData = []
 
     commonData = {}
@@ -579,13 +625,18 @@ def collectReceiptData(manifestData, metadataObj):
     commonData["specimen_uuid"] = metadataObj["specimen"][0]["specimen_uuid"]
     commonData["submitter_specimen_type"] = metadataObj["specimen"][0]["submitter_specimen_type"]
 
-    commonData["submitter_sample_id"] = metadataObj["specimen"][0]["samples"][0]["submitter_sample_id"]
+    commonData["submitter_sample_id"] = \
+        metadataObj["specimen"][0]["samples"][0]["submitter_sample_id"]
     commonData["sample_uuid"] = metadataObj["specimen"][0]["samples"][0]["sample_uuid"]
 
-    commonData["analysis_type"] = metadataObj["specimen"][0]["samples"][0]["analysis"][0]["analysis_type"]
-    commonData["workflow_name"] = metadataObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_name"]
-    commonData["workflow_version"] = metadataObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_version"]
-    commonData["bundle_uuid"] = metadataObj["specimen"][0]["samples"][0]["analysis"][0]["bundle_uuid"]
+    commonData["analysis_type"] = \
+        metadataObj["specimen"][0]["samples"][0]["analysis"][0]["analysis_type"]
+    commonData["workflow_name"] = \
+        metadataObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_name"]
+    commonData["workflow_version"] = \
+        metadataObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_version"]
+    commonData["bundle_uuid"] = \
+        metadataObj["specimen"][0]["samples"][0]["analysis"][0]["bundle_uuid"]
     commonData["metadata_uuid"] = manifestData["idMapping"]["metadata.json"]
 
     workflow_outputs = metadataObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_outputs"]
@@ -601,17 +652,23 @@ def collectReceiptData(manifestData, metadataObj):
 
     return collectedData
 
+
 def writeReceipt(collectedReceipts, receiptFileName, d="\t"):
     '''
     write an upload receipt file
     '''
     with open(receiptFileName, 'w') as receiptFile:
-        fieldnames = ["program", "project", "center_name", "submitter_donor_id", "donor_uuid", "submitter_specimen_id", "specimen_uuid", "submitter_specimen_type", "submitter_sample_id", "sample_uuid", "analysis_type", "workflow_name", "workflow_version", "file_type", "file_path", "file_uuid", "bundle_uuid", "metadata_uuid"]
+        fieldnames = ["program", "project", "center_name", "submitter_donor_id",
+                      "donor_uuid", "submitter_specimen_id", "specimen_uuid",
+                      "submitter_specimen_type", "submitter_sample_id", "sample_uuid",
+                      "analysis_type", "workflow_name", "workflow_version", "file_type",
+                      "file_path", "file_uuid", "bundle_uuid", "metadata_uuid"]
         writer = csv.DictWriter(receiptFile, fieldnames=fieldnames, delimiter=d)
 
         writer.writeheader()
         writer.writerows(collectedReceipts)
     return None
+
 
 def validateMetadataObjs(metadataObjs, jsonSchemaFile):
     '''
@@ -627,8 +684,9 @@ def validateMetadataObjs(metadataObjs, jsonSchemaFile):
         else:
             invalid.append(metadataObj)
 
-    obj = {"valid":valid, "invalid":invalid}
+    obj = {"valid": valid, "invalid": invalid}
     return obj
+
 
 def mergeDonors(metadataObjs):
     '''
@@ -641,7 +699,7 @@ def mergeDonors(metadataObjs):
         # check if donor exists
         donor_uuid = metaObj["donor_uuid"]
 
-        if not donor_uuid in donorMapping:
+        if donor_uuid not in donorMapping:
             donorMapping[donor_uuid] = metaObj
             uuid_to_timestamp[donor_uuid] = [metaObj["timestamp"]]
             continue
@@ -658,7 +716,7 @@ def mergeDonors(metadataObjs):
                 if specimen_uuid == savedSpecUuid:
                     specObj = savedSpecObj
 
-            if not specimen_uuid in savedSpecUuids:
+            if specimen_uuid not in savedSpecUuids:
                 donorObj["specimen"].append(specimen)
                 continue
 
@@ -673,14 +731,14 @@ def mergeDonors(metadataObjs):
                     if sample_uuid == savedSampleUuid:
                         sampleObj = savedSampleObj
 
-                if not sample_uuid in savedSampleUuids:
+                if sample_uuid not in savedSampleUuids:
                     specObj["samples"].append(sample)
                     continue
 
                 # check if analysis exists
-                # need to compare analysis for uniqueness by looking at analysis_type... bundle_uuid is not the right one here.
+                # need to compare analysis for uniqueness by looking at
+                # analysis_type... bundle_uuid is not the right one here.
                 for bundle in sample["analysis"]:
-                    bundle_uuid = bundle["bundle_uuid"]
                     analysis_type = bundle["analysis_type"]
                     savedAnalysisTypes = set()
                     for savedBundle in sampleObj["analysis"]:
@@ -689,7 +747,7 @@ def mergeDonors(metadataObjs):
                         if analysis_type == savedAnalysisType:
                             analysisObj = savedBundle
 
-                    if not analysis_type in savedAnalysisTypes:
+                    if analysis_type not in savedAnalysisTypes:
                         sampleObj["analysis"].append(bundle)
 
                         # timestamp mapping
@@ -703,7 +761,7 @@ def mergeDonors(metadataObjs):
                         new_workflow_version = bundle["workflow_version"]
 
                         saved_version = analysisObj["workflow_version"]
-                            # current is older than new
+                        # current is older than new
 
                         if semver.compare(saved_version, new_workflow_version) == -1:
                             sampleObj["analysis"].remove(analysisObj)
@@ -714,7 +772,7 @@ def mergeDonors(metadataObjs):
 
                         if semver.compare(saved_version, new_workflow_version) == 0:
                             # use the timestamp to determine which analysis to choose
-                            if "timestamp" in bundle and "timestamp" in analysisObj :
+                            if "timestamp" in bundle and "timestamp" in analysisObj:
                                 saved_timestamp = dateutil.parser.parse(analysisObj["timestamp"])
                                 new_timestamp = dateutil.parser.parse(bundle["timestamp"])
                                 timestamp_diff = saved_timestamp - new_timestamp
@@ -726,14 +784,14 @@ def mergeDonors(metadataObjs):
                                     if "timestamp" in bundle:
                                         uuid_to_timestamp[donor_uuid].append(bundle["timestamp"])
 
-    # Get the  most recent timstamp from uuid_to_timestamp(for each donor) and use donorMapping to substitute it
-    for uuid in uuid_to_timestamp:
-        timestamp_list = uuid_to_timestamp[uuid]
-        donorMapping[uuid]["timestamp"] = max(timestamp_list)
+    # Get the  most recent timstamp from uuid_to_timestamp(for each donor) and
+    # use donorMapping to substitute it
+    for i in uuid_to_timestamp:
+        timestamp_list = uuid_to_timestamp[i]
+        donorMapping[i]["timestamp"] = max(timestamp_list)
 
     return donorMapping
 
-#:####################################
 
 def main():
     startTime = getNow()
@@ -759,8 +817,6 @@ def main():
     logging.debug('options:\t%s' % (str(printOptions)))
     logging.debug('args:\t%s' % (str(args)))
 
-    tempDirName = os.path.basename(__file__) + "_temp"
-
     # load flattened metadata schema for input validation
     inputMetadataSchema = loadJsonSchema(options.inputMetadataSchemaFileName)
 
@@ -771,7 +827,7 @@ def main():
         try:
             # attempt to process as xls file
             fileDataList = getDataDictFromXls(fileName)
-        except Exception as exc:
+        except:
             # attempt to process as tsv file
             # logging.info("couldn't read %s as excel file" % fileName)
             # logging.info("---now trying to read as tsv file")
@@ -782,7 +838,7 @@ def main():
         for data in fileDataList:
             metaObj = getDataObj(data, inputMetadataSchema)
 
-            if metaObj == None:
+            if metaObj is None:
                 continue
 
             flatMetadataObjs.append(metaObj)
@@ -791,8 +847,9 @@ def main():
     structuredWorkflowObjMap = getWorkflowObjects(flatMetadataObjs)
 
     if options.test:
-        donorObjMapping = mergeDonors(structuredWorkflowObjMap.values())
-        validationResults = validateMetadataObjs(structuredWorkflowObjMap.values(), options.metadataSchemaFileName)
+        # donorObjMapping = mergeDonors(structuredWorkflowObjMap.values())
+        validationResults = validateMetadataObjs(structuredWorkflowObjMap.values(),
+                                                 options.metadataSchemaFileName)
         numInvalidResults = len(validationResults["invalid"])
         if numInvalidResults != 0:
             logging.critical("%s invalid merged objects found:" % (numInvalidResults))
@@ -801,7 +858,8 @@ def main():
 
     # validate metadata objects
     # exit script before upload
-    validationResults = validateMetadataObjs(structuredWorkflowObjMap.values(), options.metadataSchemaFileName)
+    validationResults = validateMetadataObjs(structuredWorkflowObjMap.values(),
+                                             options.metadataSchemaFileName)
     numInvalidResults = len(validationResults["invalid"])
     if numInvalidResults != 0:
         logging.critical("%s invalid metadata objects found:" % (numInvalidResults))
@@ -822,8 +880,8 @@ def main():
         logging.info("program ran for %s s." % str(runTime))
         return None
     else:
-        logging.info("Now attempting to upload data.")
-        logging.info("If the upload seems to hang, it could be that the server doesn't recognize the IP.")
+        logging.info("Uploading files.")
+        logging.info("NOTE: If hangs IP may be blocked")
 
     # UPLOAD SECTION
     counts = {}
@@ -851,7 +909,8 @@ def main():
             bundle_uuid = dirName
 
             # register upload
-            args = {"accessToken":options.awsAccessToken, "bundleDir":dirName, "metadataUrl":options.metadataServerUrl}
+            args = {"accessToken": options.awsAccessToken, "bundleDir": dirName,
+                    "metadataUrl": options.metadataServerUrl}
             regSuccess = registerBundleUpload(**args)
 
             # perform upload
@@ -913,6 +972,6 @@ def main():
     logging.shutdown()
     return None
 
-# main program section
+
 if __name__ == "__main__":
     main()
