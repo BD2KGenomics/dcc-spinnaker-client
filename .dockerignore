@@ -1,0 +1,6 @@
+.git/
+!.git/HEAD
+!.git/refs/
+!.git/packed-refs
+outputs
+examples

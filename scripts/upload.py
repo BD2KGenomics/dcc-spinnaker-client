@@ -1,5 +1,6 @@
 """
-spinnaker.py
+upload.py
+
 Generate and upload UCSC Core Genomics data bundles from information passed via excel or tsv file.
 
 See "helper client" in:
@@ -43,10 +44,10 @@ def getOptions():
     parser.add_option("-s", "--skip-upload", action="store_true", default=False, dest="skip_upload", help="Switch to skip upload. Metadata files will be generated only.")
     parser.add_option("-t", "--test", action="store_true", default=False, dest="test", help="Switch for development testing.")
 
-    parser.add_option("-i", "--input-metadata-schema", action="store", default="input_metadata.json", type="string", dest="inputMetadataSchemaFileName", help="flattened json schema file for input metadata")
-    parser.add_option("-m", "--metadata-schema", action="store", default="metadata_schema.json", type="string", dest="metadataSchemaFileName", help="flattened json schema file for metadata")
+    parser.add_option("-i", "--input-metadata-schema", action="store", default="schemas/input_metadata.json", type="string", dest="inputMetadataSchemaFileName", help="flattened json schema file for input metadata")
+    parser.add_option("-m", "--metadata-schema", action="store", default="schemas/metadata_schema.json", type="string", dest="metadataSchemaFileName", help="flattened json schema file for metadata")
 
-    parser.add_option("-d", "--output-dir", action="store", default="output_metadata", type="string", dest="metadataOutDir", help="output directory. In the case of colliding file names, the older file will be overwritten.")
+    parser.add_option("-d", "--output-dir", action="store", default="/outputs", type="string", dest="metadataOutDir", help="output directory. In the case of colliding file names, the older file will be overwritten.")
 
     parser.add_option("-r", "--receipt-file", action="store", default="receipt.tsv", type="string", dest="receiptFile", help="receipt file name. This tsv file is the receipt of the upload, with UUIDs filled in.")
 
@@ -230,6 +231,7 @@ def getDataObj(dict, schema):
     else:
         logging.error("validation FAILED for \t%s" % (jsonPP(dataObj)))
         return None
+
 
 def getDataDictFromXls(fileName, sheetName="Sheet1"):
     """
@@ -431,15 +433,15 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
          -Djavax.net.ssl.trustStorePassword=changeit
          -Dserver.baseUrl=https://storage2.ucsc-cgl.org:8444
          -DaccessToken=${accessToken}
-         -jar dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar
+         -jar dcc-metadata-client/lib/dcc-metadata-client.jar
          -i ${upload}
          -o ${manifest}
          -m manifest.txt
      """
      success = True
 
-     metadataClientJar = "/dcc-metadata-client/lib/dcc-metadata-client.jar"
-     trustStore = "/ssl/cacerts"
+     metadataClientJar = "dcc-metadata-client/lib/dcc-metadata-client.jar"
+     trustStore = "ssl/cacerts"
      trustStorePw = "changeit"
 
      # build command string
@@ -455,9 +457,10 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
      command = " ".join(command)
 
      # !!! This may expose the access token !!!
-#      logging.debug("register upload command:\t%s" % (command))
+     logging.debug("register upload command:\t%s" % (command))
 
      try:
+         logging.debug(command)
          output = subprocess.check_output(command, cwd=os.getcwd(), stderr=subprocess.STDOUT, shell=True)
      except Exception as exc:
          success = False
@@ -479,13 +482,13 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=F
         -Dclient.ssl.custom=false
         -Dstorage.url=https://storage2.ucsc-cgl.org:5431
         -DaccessToken=${accessToken}
-        -jar icgc-storage-client-1.0.14-SNAPSHOT/lib/icgc-storage-client.jar upload
+        -jar icgc-storage-client/lib/icgc-storage-client.jar upload
         --manifest ${manifest}/manifest.txt
     """
     success = True
 
-    storageClientJar = "/icgc-storage-client/lib/icgc-storage-client.jar"
-    trustStore = "/ssl/cacerts"
+    storageClientJar = "icgc-storage-client/lib/icgc-storage-client.jar"
+    trustStore = "ssl/cacerts"
     trustStorePw = "changeit"
 
     # build command string
