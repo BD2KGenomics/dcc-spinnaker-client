@@ -118,7 +118,7 @@ def loadJsonObj(fileName):
         object = json.load(file)
         file.close()
     except:
-        logging.exception("loadJsonObj")
+        logging.error("Error loading and parsing {}".format(fileName))
     return object
 
 
@@ -137,7 +137,7 @@ def validateObjAgainstJsonSchema(obj, schema):
     try:
         jsonschema.validate(obj, schema)
     except Exception as exc:
-        logging.error("jsonschema.validate FAILED in validateObjAgainstJsonSchema: %s" % (str(exc)))
+        logging.error("Schemd json validation failed: %s" % (str(exc)))
         return False
     return True
 
@@ -261,7 +261,7 @@ def getDataObj(dict, schema):
     if (isValid):
         return dataObj
     else:
-        logging.error("validation FAILED for \t%s" % (jsonPP(dataObj)))
+        logging.error("Validation failed for %s" % (jsonPP(dataObj)))
         return None
 
 
@@ -269,10 +269,10 @@ def getDataDictFromXls(fileName, sheetName="Sheet1"):
     """
     Get list of dict objects from .xlsx,.xlsm,.xltx,.xltm.
     """
-    logging.debug("attempt to read %s as xls file" % (fileName))
+    logging.debug("Attempt to read %s as xls file" % (fileName))
     workbook = openpyxl.load_workbook(fileName)
     sheetNames = workbook.get_sheet_names()
-    logging.debug("sheetNames:\t%s" % (str(sheetNames)))
+    logging.debug("Sheet names: %s" % (str(sheetNames)))
 
     worksheet = workbook.get_sheet_by_name(sheetName)
 
@@ -310,13 +310,13 @@ def ln_s(file_path, link_path):
     except OSError as exc:
         if exc.errno == errno.EEXIST:
             if os.path.isdir(link_path):
-                logging.error("linking failed -> %s is an existing directory" % (link_path))
+                logging.error("Linking failed -> %s is an existing directory" % (link_path))
             elif os.path.isfile(link_path):
-                logging.error("linking failed -> %s is an existing file" % (link_path))
+                logging.error("Linking failed -> %s is an existing file" % (link_path))
             elif os.path.islink(link_path):
-                logging.error("linking failed -> %s is an existing link" % (link_path))
+                logging.error("Linking failed -> %s is an existing link" % (link_path))
         else:
-            logging.error("raising error")
+            logging.error("Raising error")
             raise
     return None
 
@@ -411,7 +411,7 @@ def writeJson(directory, fileName, jsonObj):
         json.dump(jsonObj, file, indent=4, separators=(',', ': '), sort_keys=True)
         success = 1
     except:
-        logging.exception("ERROR writing %s/%s" % (directory, fileName))
+        logging.error("Error writing %s/%s" % (directory, fileName))
         success = 0
     finally:
         file.close()
@@ -505,10 +505,10 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
     except Exception as exc:
         success = False
         # !!! logging.exception here may expose access token !!!
-        logging.error("ERROR while registering bundle %s" % bundleDir)
+        logging.error("Error while registering bundle %s" % bundleDir)
         writeJarExceptionsToLog(exc.output)
     finally:
-        logging.info("done registering bundle upload %s" % bundleDir)
+        logging.info("Finished registering bundle upload %s" % bundleDir)
 
     return success
 
@@ -560,7 +560,7 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=F
     except subprocess.CalledProcessError as exc:
         success = False
         # !!! logging.exception here may expose access token !!!
-        logging.error("ERROR while uploading files for bundle %s" % bundleDir)
+        logging.error("Error while uploading files for bundle %s" % bundleDir)
         writeJarExceptionsToLog(exc.output)
     finally:
         logging.info("done uploading bundle %s" % bundleDir)
@@ -798,7 +798,7 @@ def main():
     (options, args, parser) = getOptions()
 
     if len(args) == 0:
-        logging.critical("no input files")
+        logging.error("no input files")
         sys.exit(1)
 
     if options.verbose:
@@ -852,9 +852,9 @@ def main():
                                                  options.metadataSchemaFileName)
         numInvalidResults = len(validationResults["invalid"])
         if numInvalidResults != 0:
-            logging.critical("%s invalid merged objects found:" % (numInvalidResults))
+            logging.error("%s invalid merged objects found:" % (numInvalidResults))
         else:
-            logging.critical("All merged objects validated!!")
+            logging.info("All merged objects validated")
 
     # validate metadata objects
     # exit script before upload
@@ -862,9 +862,9 @@ def main():
                                              options.metadataSchemaFileName)
     numInvalidResults = len(validationResults["invalid"])
     if numInvalidResults != 0:
-        logging.critical("%s invalid metadata objects found:" % (numInvalidResults))
+        logging.error("%s invalid metadata objects found:" % (numInvalidResults))
         for metaObj in validationResults["invalid"]:
-            logging.critical("INVALID: %s" % (json.dumps(metaObj)))
+            logging.error("INVALID: %s" % (json.dumps(metaObj)))
         sys.exit(1)
     else:
         logging.info("validated all metadata objects for output")
@@ -877,11 +877,11 @@ def main():
         logging.info("Skipping data upload steps.")
         logging.info("A detailed log is at: %s" % (logFilePath))
         runTime = getTimeDelta(startTime).total_seconds()
-        logging.info("program ran for %s s." % str(runTime))
+        logging.info("Program ran for %s s." % str(runTime))
         return None
     else:
         logging.info("Uploading files.")
-        logging.info("NOTE: If hangs IP may be blocked")
+        logging.info("NOTE: If it hangs IP may be blocked")
 
     # UPLOAD SECTION
     counts = {}
@@ -964,11 +964,11 @@ def main():
 
     # final console output
     if len(counts["failedRegistration"]) > 0 or len(counts["failedUploads"]) > 0:
-        logging.error("THERE WERE SOME FAILED PROCESSES !")
+        logging.error("Upload failed")
 
-    logging.info("A detailed log is at: %s" % (logFilePath))
+    logging.info("Upload succeeded. A detailed log is at: %s" % (logFilePath))
     runTime = getTimeDelta(startTime).total_seconds()
-    logging.info("program ran for %s s." % str(runTime))
+    logging.info("Upload took %s s." % str(runTime))
     logging.shutdown()
     return None
 
