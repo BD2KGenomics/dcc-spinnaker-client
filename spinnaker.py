@@ -847,7 +847,7 @@ def main():
             bundle_uuid = dirName
 
             # register upload
-            args = {"accessToken":options.awsAccessToken, "bundleDir":dirName, "metadataUrl":options.metadataServerUrl}
+            args = {"accessToken":options.awsAccessToken, "bundleDir":dirName, "metadataUrl":options.metadataServerUrl, "storageClientPath":options.storageClientPath}
             regSuccess = registerBundleUpload(**args)
 
             # perform upload
@@ -855,6 +855,7 @@ def main():
             if regSuccess:
                 args["storageUrl"] = options.storageServerUrl
                 args["force"] = options.force_upload
+                args["storageClientPath"] = options.storageClientPath
                 upSuccess = performBundleUpload(**args)
             else:
                 counts["failedRegistration"].append(bundle_uuid)
