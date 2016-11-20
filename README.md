@@ -94,7 +94,32 @@ mind if you're just testing the metadata components and don't want to create a t
 the fact data linked to from the `sample.tsv` the program and project will both be TEST which should make
 it easy to avoid in the future. The file is based on [this](https://docs.google.com/spreadsheets/d/13fqil92C-Evi-4cy_GTnzNMmrD0ssuSCx3-cveZ4k70/edit?usp=sharing) google doc.
 
-**NOTE:** you may need to modify the storage and metadata service URLs used via the `--metadata-server-url` and `--storage-server-url` parameters if you are using a non-production storage system. 
+**NOTE:** you may need to modify the storage and metadata service URLs used via the `--metadata-server-url` and `--storage-server-url` parameters if you are using a non-production storage system.
+
+## Upload Simulation
+
+Perform multiple uploads in order to generate data for testing.
+
+### simulate_upload.py
+
+This script runs an unlimited number of BAM file uploads at random intervals.  The script will run until killed.
+
+    cd luigi_task_executor
+    python simulate_upload.py --bam-url https://s3.amazonaws.com/oconnor-test-bucket/sample-data/NA12878.chrom20.ILLUMINA.bwa.CEU.low_coverage.20121211.bam \
+    --input-metadata-schema ../input_metadata.json --metadata-schema ../metadata_schema.json --output-dir output_metadata --receipt-file receipt.tsv \
+    --storage-access-token `cat ../ucsc-storage2-client/accessToken` --metadata-server-url https://storage2.ucsc-cgl.org:8444 \
+    --storage-server-url https://storage2.ucsc-cgl.org:5431  --ucsc-storage-client-path ../ucsc-storage2-client
+
+Another script, this time it simulates the upload of fastq files:
+
+    cd simulated_uploaders
+    python simulate_upload_rnaseq_fastq.py --fastq-r1-path \
+    https://s3.amazonaws.com/oconnor-test-bucket/sample-data/ERR030886_1.fastq.gz \
+    --fastq-r2-path https://s3.amazonaws.com/oconnor-test-bucket/sample-data/ERR030886_2.fastq.gz \
+    --input-metadata-schema ../schemas/input_metadata.json --metadata-schema ../schemas/metadata_schema.json \
+    --output-dir output_metadata --receipt-file receipt.tsv \
+    --storage-access-token `cat ../ucsc-storage2-client/accessToken` --metadata-server-url https://storage2.ucsc-cgl.org:8444 \
+    --storage-server-url https://storage2.ucsc-cgl.org:5431  --ucsc-storage-client-path ../ucsc-storage2-client
 
 ## Data Types
 
