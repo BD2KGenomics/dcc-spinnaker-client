@@ -47,8 +47,8 @@ def main():
         # create template
         specimen = '{0:05}'.format(random.randint(1, 1000000))
         template = '''Program	Project	Center Name	Submitter Donor ID	Donor UUID	Submitter Specimen ID	Specimen UUID	Submitter Specimen Type	Submitter Experimental Design	Submitter Sample ID	Sample UUID	Analysis Type	Workflow Name	Workflow Version	File Type	File Path	Upload File ID	Data Bundle ID	Metadata.json
-Demo	Demo	UCSC	S%s		S%sa		Normal - blood derived	RNA-Seq	S%sa1		upload	uploader	1.0.0	fastq.gz	ERR030886_1.fastq.gz
-Demo	Demo	UCSC	S%s		S%sa		Normal - blood derived	RNA-Seq	S%sa1		upload	uploader	1.0.0	fastq.gz	ERR030886_2.fastq.gz''' % (str(specimen), str(specimen), str(specimen), str(specimen), str(specimen), str(specimen))
+TEST	TEST	UCSC	S%s		S%sa		Normal - blood derived	RNA-Seq	S%sa1		sequence_upload	Spinnaker	1.0.0	fastq.gz	ERR030886_1.fastq.gz
+TEST	TEST	UCSC	S%s		S%sa		Normal - blood derived	RNA-Seq	S%sa1		sequence_upload	Spinnaker	1.0.0	fastq.gz	ERR030886_2.fastq.gz''' % (str(specimen), str(specimen), str(specimen), str(specimen), str(specimen), str(specimen))
         f = open('sample.tsv', 'w')
         print >>f, template
         f.close()
