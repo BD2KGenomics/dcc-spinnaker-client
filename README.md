@@ -119,7 +119,7 @@ Another script, this time it simulates the upload of fastq files:
     --fastq-r2-path https://s3.amazonaws.com/oconnor-test-bucket/sample-data/ERR030886_2.fastq.gz \
     --input-metadata-schema ../schemas/input_metadata.json --metadata-schema ../schemas/metadata_schema.json \
     --output-dir output_metadata --receipt-file receipt.tsv \
-    --storage-access-token `cat accessToken` --metadata-server-url https://storage2.ucsc-cgl.org:8444 \
+    --storage-access-token `cat ../accessToken` --metadata-server-url https://storage2.ucsc-cgl.org:8444 \
     --storage-server-url https://storage2.ucsc-cgl.org:5431  --ucsc-storage-client-path ../ucsc-storage-client
 
 ## Data Types

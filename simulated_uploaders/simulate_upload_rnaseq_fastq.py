@@ -25,9 +25,16 @@ def getOptions():
 def main():
     args = getOptions()
     # prep download
-    url_arr = args.bam_url.split("/")
+    url_arr = args.fastq_r1_path.split("/")
     if not os.path.isfile(url_arr[-1]):
-        cmd = "curl -k %s > %s" % (args.bam_url, url_arr[-1])
+        cmd = "curl -k %s > %s" % (args.fastq_r1_path, 'ERR030886_1.fastq.gz')
+        print "DOWNLOADING: "+cmd
+        result = subprocess.call(cmd, shell=True)
+        if (result != 0):
+            print "PROBLEMS DOWNLOADING"
+    url_arr = args.fastq_r2_path.split("/")
+    if not os.path.isfile(url_arr[-1]):
+        cmd = "curl -k %s > %s" % (args.fastq_r2_path, 'ERR030886_2.fastq.gz')
         print "DOWNLOADING: "+cmd
         result = subprocess.call(cmd, shell=True)
         if (result != 0):
