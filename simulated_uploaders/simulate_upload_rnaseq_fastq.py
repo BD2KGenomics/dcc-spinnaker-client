@@ -53,7 +53,7 @@ Demo	Demo	UCSC	S%s		S%sa		Normal - blood derived	RNA-Seq	S%sa1		upload	uploader	
         print >>f, template
         f.close()
         # execute upload
-        cmd = "rm -rf output_metadata; mkdir -p output_metadata; python ../spinnaker.py --input-metadata-schema %s --metadata-schema %s --output-dir output_metadata --receipt-file receipt.tsv --storage-access-token %s --metadata-server-url %s --storage-server-url %s --force-upload --ucsc-storage-client-path %s sample.tsv" % (args.input_metadata_schema, args.metadata_schema, args.storage_access_token, args.metadata_server_url, args.storage_server_url, args.ucsc_storage_client_path)
+        cmd = "rm -rf output_metadata; mkdir -p output_metadata; python ../spinnaker.py --input-metadata-schema %s --metadata-schema %s --output-dir output_metadata --receipt-file receipt.tsv --storage-access-token %s --metadata-server-url %s --storage-server-url %s --force-upload --storage-client-path %s sample.tsv" % (args.input_metadata_schema, args.metadata_schema, args.storage_access_token, args.metadata_server_url, args.storage_server_url, args.ucsc_storage_client_path)
         print "CMD: %s" % cmd
         result = subprocess.call(cmd, shell=True)
         if (result != 0):

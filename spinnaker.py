@@ -55,6 +55,7 @@ def getOptions():
     parser.add_option("--storage-access-token", action="store", default="NA", type="string", dest="awsAccessToken", help="access token for AWS looks something like 12345678-abcd-1234-abcdefghijkl.")
     parser.add_option("--metadata-server-url", action="store", default="https://storage.ucsc-cgl.org:8444", type="string", dest="metadataServerUrl", help="URL for metadata server.")
     parser.add_option("--storage-server-url", action="store", default="https://storage.ucsc-cgl.org:5431", type="string", dest="storageServerUrl", help="URL for storage server.")
+    parser.add_option("--storage-client-path", action="store", default="ucsc-storage-client", type="string", dest="storageClientPath", help="Path to storage client.")
     parser.add_option("--force-upload", action="store_true", default=False, dest="force_upload", help="Switch to force upload in case object ID already exists remotely. Overwrites existing bundle.")
 
     (options, args) = parser.parse_args()
@@ -424,7 +425,7 @@ def setupLogging(logfileName, logFormat, logLevel, logToConsole=True):
         logging.getLogger('').addHandler(console)
     return None
 
-def registerBundleUpload(metadataUrl, bundleDir, accessToken):
+def registerBundleUpload(metadataUrl, bundleDir, accessToken, storageClientPath):
      """
      java
          -Djavax.net.ssl.trustStore=ssl/cacerts
@@ -439,8 +440,8 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
      success = True
 
      #metadataClientJar = "/dcc-metadata-client/lib/dcc-metadata-client.jar"
-     metadataClientJar = "ucsc-storage-client/dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar"
-     trustStore = "ucsc-storage-client/ssl/cacerts"
+     metadataClientJar = storageClientPath+"/dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar"
+     trustStore = storageClientPath+"/ssl/cacerts"
      trustStorePw = "changeit"
 
      # build command string
@@ -470,7 +471,7 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
 
      return success
 
-def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=False):
+def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, storageClientPath, force=False):
     """
     Java
         -Djavax.net.ssl.trustStore=ssl/cacerts
@@ -486,8 +487,8 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=F
     success = True
 
     #storageClientJar = "/icgc-storage-client/lib/icgc-storage-client.jar"
-    storageClientJar = "ucsc-storage-client/icgc-storage-client-1.0.14-SNAPSHOT/lib/icgc-storage-client.jar"
-    trustStore = "ucsc-storage-client/ssl/cacerts"
+    storageClientJar = storageClientPath+"/icgc-storage-client-1.0.14-SNAPSHOT/lib/icgc-storage-client.jar"
+    trustStore = storageClientPath+"/ssl/cacerts"
     trustStorePw = "changeit"
 
     # build command string
@@ -578,7 +579,7 @@ def collectReceiptData(manifestData, metadataObj):
     commonData["specimen_uuid"] = metadataObj["specimen"][0]["specimen_uuid"]
     commonData["submitter_specimen_type"] = metadataObj["specimen"][0]["submitter_specimen_type"]
     commonData["submitter_experimental_design"] = metadataObj["specimen"][0]["submitter_experimental_design"]
-    
+
     commonData["submitter_sample_id"] = metadataObj["specimen"][0]["samples"][0]["submitter_sample_id"]
     commonData["sample_uuid"] = metadataObj["specimen"][0]["samples"][0]["sample_uuid"]
 
