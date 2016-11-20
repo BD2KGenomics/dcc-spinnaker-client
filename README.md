@@ -104,6 +104,7 @@ Perform multiple uploads in order to generate data for testing.
 
 This script runs an unlimited number of BAM file uploads at random intervals.  The script will run until killed.
 
+    # FIXME
     cd luigi_task_executor
     python simulate_upload.py --bam-url https://s3.amazonaws.com/oconnor-test-bucket/sample-data/NA12878.chrom20.ILLUMINA.bwa.CEU.low_coverage.20121211.bam \
     --input-metadata-schema ../input_metadata.json --metadata-schema ../metadata_schema.json --output-dir output_metadata --receipt-file receipt.tsv \
@@ -118,8 +119,8 @@ Another script, this time it simulates the upload of fastq files:
     --fastq-r2-path https://s3.amazonaws.com/oconnor-test-bucket/sample-data/ERR030886_2.fastq.gz \
     --input-metadata-schema ../schemas/input_metadata.json --metadata-schema ../schemas/metadata_schema.json \
     --output-dir output_metadata --receipt-file receipt.tsv \
-    --storage-access-token `cat ../ucsc-storage2-client/accessToken` --metadata-server-url https://storage2.ucsc-cgl.org:8444 \
-    --storage-server-url https://storage2.ucsc-cgl.org:5431  --ucsc-storage-client-path ../ucsc-storage2-client
+    --storage-access-token `cat accessToken` --metadata-server-url https://storage2.ucsc-cgl.org:8444 \
+    --storage-server-url https://storage2.ucsc-cgl.org:5431  --ucsc-storage-client-path ../ucsc-storage-client
 
 ## Data Types
 
