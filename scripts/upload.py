@@ -77,6 +77,9 @@ def getOptions():
     parser.add_option("--force-upload", action="store_true", default=False,
                       dest="force_upload",
                       help="Force upload if object exists remotely. Overwrites existing bundle.")
+    parser.add_option("--skip-submit", action="store_true", default=False,
+                      dest="skip_submit",
+                      help="Skip contacting the submission server.")
 
     (options, args) = parser.parse_args()
 
@@ -890,10 +893,11 @@ def main():
     counts["failedUploads"] = []
     counts["bundlesUploaded"] = 0
 
-    r = requests.post(options.submissionServerUrl + "/v0/submissions", json={})
-    submission_id = json.loads(r.text)["submission"]["id"]
-    logging.info("You can monitor the upload at {}/v0/submissions/{}".format(
-        options.submissionServerUrl, submission_id))
+    if not options.skip_submit:
+        r = requests.post(options.submissionServerUrl + "/v0/submissions", json={})
+        submission_id = json.loads(r.text)["submission"]["id"]
+        logging.info("You can monitor the upload at {}/v0/submissions/{}".format(
+            options.submissionServerUrl, submission_id))
 
     # first pass uploads data bundles
     for dirName, subdirList, fileList in os.walk(options.metadataOutDir):
@@ -956,11 +960,13 @@ def main():
     writeReceipt(collectedReceipts, receiptFilePath)
 
     # Sent the receipt to the submission server
-    with open(receiptFilePath) as f:
-        r = requests.put(options.submissionServerUrl + "/v0/submissions/{}".format(submission_id),
-                         json={"receipt": f.read()})
-        logging.info("You can view the receipt at {}/v0/submissions/{}".format(
-            options.submissionServerUrl, submission_id))
+    if not options.skip_submit:
+        with open(receiptFilePath) as f:
+            r = requests.put(options.submissionServerUrl
+                             + "/v0/submissions/{}".format(submission_id),
+                             json={"receipt": f.read()})
+            logging.info("You can view the receipt at {}/v0/submissions/{}".format(
+                options.submissionServerUrl, submission_id))
 
     # final console output
     if len(counts["failedRegistration"]) > 0 or len(counts["failedUploads"]) > 0:
