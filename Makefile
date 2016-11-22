@@ -1,5 +1,8 @@
 build:
-	docker build -t dcc-uploader .
+	docker build -t robcurrie/dcc-uploader .
+
+push:
+	docker push robcurrie/dcc-uploader
 
 upload:
 	sudo rm -rf outputs
@@ -8,7 +11,7 @@ upload:
 		-v `pwd`/samples:/samples \
 		-v `pwd`/outputs:/outputs \
 		--link spinnaker:spinnaker \
-		dcc-uploader \
+		robcurrie/dcc-uploader \
 		--storage-access-token $(UCSC_DCC_TOKEN) \
 		--submission-server-url http://spinnaker:5000 \
 		--force-upload \
@@ -20,7 +23,7 @@ skip_submit:
 		-v `pwd`/manifests:/manifests \
 		-v `pwd`/samples:/samples \
 		-v `pwd`/outputs:/outputs \
-		dcc-uploader \
+		robcurrie/dcc-uploader \
 		--storage-access-token $(UCSC_DCC_TOKEN) \
 		--force-upload \
 		--skip-submit \
@@ -32,4 +35,4 @@ debug:
 		-v `pwd`/samples:/samples \
 		-v `pwd`/outputs:/outputs \
 		--link spinnaker:spinnaker \
-		dcc-uploader
+		robcurrie/dcc-uploader
