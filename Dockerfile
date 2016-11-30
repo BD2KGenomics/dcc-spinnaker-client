@@ -9,4 +9,4 @@ RUN pip install -r /app/requirements.txt
 
 ADD . /app
 
-ENTRYPOINT ["python", "scripts/upload.py"]
+ENTRYPOINT ["python", "spinnaker.py"]
