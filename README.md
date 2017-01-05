@@ -94,6 +94,12 @@ mind if you're just testing the metadata components and don't want to create a t
 the fact data linked to from the `sample.tsv` the program and project will both be TEST which should make
 it easy to avoid in the future. The file is based on [this](https://docs.google.com/spreadsheets/d/13fqil92C-Evi-4cy_GTnzNMmrD0ssuSCx3-cveZ4k70/edit?usp=sharing) google doc.
 
+**NOTE:** Here's a new template I'm working on that now includes tissue: [20170104 - Sample Upload Metadata Doc](https://docs.google.com/spreadsheets/d/1xuPS8ogphvvNrdJ8gRDlqFf-9fLQh9Pj1Zgx1mnUyeA/edit#gid=0)
+
+And I think we should use [BRENDA](http://www.brenda-enzymes.org/ontology.php?ontology_id=3) for the tissue ontology.  E.g. prostate would be officially "prostate gland" which corresponds to BTO:0001129 
+
+ICGC is using a limited list of hard-coded terms for primary tissues based on [this](http://docs.icgc.org/submission/projects/). So not super generic for what we’re doing.
+
 **NOTE:** you may need to modify the storage and metadata service URLs used via the `--metadata-server-url` and `--storage-server-url` parameters if you are using a non-production storage system.
 
 ## Upload Simulation
