@@ -85,7 +85,7 @@ Now look in the `output_metadata` directory for per-bundle directories that cont
 ### Enabling Upload
 
 By default the upload won't take place if the directory `ucsc-storage-client` is not present in the `dcc-storage-schema`
-directory.  In order to get the client, you need to be given an access key and download our client tarball.  See our public [S3 bucket](https://s3-us-west-2.amazonaws.com/beni-dcc-storage-dev/ucsc-storage-client.tar.gz)
+directory.  In order to get the client, you need to be given an access key and download our client tarball.  See our public [S3 bucket](https://s3-us-west-2.amazonaws.com/beni-dcc-storage-dev/20161216_ucsc-storage-client.tar.gz)
 for the tarball.
 
 If you have the directory setup and don't pass in `--skip-upload` the upload will take place.  Keep this in
