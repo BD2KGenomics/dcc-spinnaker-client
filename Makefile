@@ -7,10 +7,9 @@ upload:
 		-v `pwd`/manifests:/manifests \
 		-v `pwd`/samples:/samples \
 		-v `pwd`/outputs:/outputs \
-		--link spinnaker:spinnaker \
 		dcc-spinnaker-client \
 		--storage-access-token $(UCSC_DCC_TOKEN) \
-		--submission-server-url http://spinnaker:5000 \
+		--submission-server-url http://spinnaker.medbook.io:5000 \
 		--force-upload \
 		/manifests/three_manifest.tsv
 
