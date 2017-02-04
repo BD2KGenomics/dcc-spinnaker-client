@@ -430,7 +430,7 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken, storageClientPath)
      """
      java
          -Djavax.net.ssl.trustStore=ssl/cacerts
-         -Djavax.net.ssl.trustStorePassword=changeit
+         -Djavax.net.ssl.trustStorePassword=password
          -Dserver.baseUrl=https://storage.ucsc-cgl.org:8444
          -DaccessToken=${accessToken}
          -jar dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar
@@ -443,7 +443,7 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken, storageClientPath)
      #metadataClientJar = "/dcc-metadata-client/lib/dcc-metadata-client.jar"
      metadataClientJar = storageClientPath+"/dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar"
      trustStore = storageClientPath+"/ssl/cacerts"
-     trustStorePw = "changeit"
+     trustStorePw = "password"
 
      # build command string
      command = ["java"]
@@ -476,7 +476,7 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, storage
     """
     Java
         -Djavax.net.ssl.trustStore=ssl/cacerts
-        -Djavax.net.ssl.trustStorePassword=changeit
+        -Djavax.net.ssl.trustStorePassword=password
         -Dmetadata.url=https://storage.ucsc-cgl.org:8444
         -Dmetadata.ssl.enabled=true
         -Dclient.ssl.custom=false
@@ -490,7 +490,7 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, storage
     #storageClientJar = "/icgc-storage-client/lib/icgc-storage-client.jar"
     storageClientJar = storageClientPath+"/icgc-storage-client-1.0.14-SNAPSHOT/lib/icgc-storage-client.jar"
     trustStore = storageClientPath+"/ssl/cacerts"
-    trustStorePw = "changeit"
+    trustStorePw = "password"
 
     # build command string
     command = ["java"]
