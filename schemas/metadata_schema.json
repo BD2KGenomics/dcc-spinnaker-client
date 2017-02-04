@@ -94,7 +94,7 @@
             ]
         }
     },
-    "required": ["program", "project", "center_name", "submitter_donor_id", "donor_uuid", "schema_version", "timestamp", "specimen"],
+    "required": ["program", "project", "center_name", "submitter_donor_id", "donor_uuid", "submitter_donor_primary_site", "schema_version", "timestamp", "specimen"],
     "properties": {
         "schema_version": {
             "$ref": "#/definitions/schema_version"
@@ -116,6 +116,9 @@
         },
         "donor_uuid": {
             "$ref": "#/definitions/uuid"
+        },
+        "submitter_donor_primary_site":{
+            "type": "string"
         },
         "specimen": {
             "type": "array",
