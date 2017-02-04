@@ -430,7 +430,7 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken, storageClientPath)
      """
      java
          -Djavax.net.ssl.trustStore=ssl/cacerts
-         -Djavax.net.ssl.trustStorePassword=password
+         -Djavax.net.ssl.trustStorePassword=changeit
          -Dserver.baseUrl=https://storage.ucsc-cgl.org:8444
          -DaccessToken=${accessToken}
          -jar dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar
@@ -443,7 +443,7 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken, storageClientPath)
      #metadataClientJar = "/dcc-metadata-client/lib/dcc-metadata-client.jar"
      metadataClientJar = storageClientPath+"/dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar"
      trustStore = storageClientPath+"/ssl/cacerts"
-     trustStorePw = "password"
+     trustStorePw = "changeit"
 
      # build command string
      command = ["java"]
@@ -476,7 +476,7 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, storage
     """
     Java
         -Djavax.net.ssl.trustStore=ssl/cacerts
-        -Djavax.net.ssl.trustStorePassword=password
+        -Djavax.net.ssl.trustStorePassword=changeit
         -Dmetadata.url=https://storage.ucsc-cgl.org:8444
         -Dmetadata.ssl.enabled=true
         -Dclient.ssl.custom=false
@@ -490,7 +490,7 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, storage
     #storageClientJar = "/icgc-storage-client/lib/icgc-storage-client.jar"
     storageClientJar = storageClientPath+"/icgc-storage-client-1.0.14-SNAPSHOT/lib/icgc-storage-client.jar"
     trustStore = storageClientPath+"/ssl/cacerts"
-    trustStorePw = "password"
+    trustStorePw = "changeit"
 
     # build command string
     command = ["java"]
@@ -576,7 +576,7 @@ def collectReceiptData(manifestData, metadataObj):
     commonData["submitter_donor_id"] = metadataObj["submitter_donor_id"]
     commonData["donor_uuid"] = metadataObj["donor_uuid"]
     #ADDING PRIMARY SITE
-    commonDta["submitter_donor_primary_site"] = metadataObj["submitter_donor_primary_site"]
+    commonData["submitter_donor_primary_site"] = metadataObj["submitter_donor_primary_site"]
 
     commonData["submitter_specimen_id"] = metadataObj["specimen"][0]["submitter_specimen_id"]
     commonData["specimen_uuid"] = metadataObj["specimen"][0]["specimen_uuid"]
