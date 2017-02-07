@@ -16,6 +16,9 @@
         "submitter_donor_id": {
             "type": "string"
         },
+        "submitter_donor_primary_site":{
+            "type": "string"
+        },
         "donor_uuid": {
             "type": "string"
         },
