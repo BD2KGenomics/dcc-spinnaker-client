@@ -28,6 +28,9 @@
         "submitter_specimen_type": {
             "type": "string"
         },
+	"submitter_experimental_design": {
+	    "type": "string"
+	},
         "submitter_sample_id": {
             "type": "string"
         },

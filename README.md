@@ -14,13 +14,18 @@ Second, this repo contains a `spinnaker.py` script that takes a TSV format and c
 
 We use [HubFlow](https://datasift.github.io/gitflow/GitFlowForGitHub.html) for our feature branch/release process.
 
+* `master` is the stable release branch
+* `develop` is the unstable branch
+* make features on feature branches
+* candidate release branches are created right before a release
+
 ## Install
 
 ### Ubuntu 14.04
 
 You need to make sure you have system level dependencies installed in the appropriate way for your OS.  For Ubuntu 14.04 you do:
 
-    sudo apt-get install python-dev libxml2-dev libxslt-dev lib32z1-dev
+    sudo apt-get install python-dev libxml2-dev libxslt-dev lib32z1-dev python-setuptools build-essential
 
 ### Python
 
@@ -50,6 +55,8 @@ Alternatively, you may want to use Conda, see [here](http://conda.pydata.org/doc
 
 ## Generate Test Metadata (and Optionally Upload Data to Storage Service)
 
+First, create a file for your access token e.g. `accessToken`.
+
 We need to create a bunch of JSON documents for multiple donors and multiple
 experimental designs and file upload types.  To do that we (Chris) developed a very simple
 TSV to JSON tool and this will ultimately form the basis of our helper applications
@@ -60,7 +67,7 @@ that clients will use in the field to prepare their samples.
 		--metadata-schema schemas/metadata_schema.json \
 		--output-dir output_metadata \
 		--receipt-file receipt.tsv \
-		--storage-access-token `cat ucsc-storage-client/accessToken` \
+		--storage-access-token `cat accessToken` \
 		--skip-upload \
 		sample_tsv/sample.tsv
 
@@ -78,8 +85,7 @@ Now look in the `output_metadata` directory for per-bundle directories that cont
 ### Enabling Upload
 
 By default the upload won't take place if the directory `ucsc-storage-client` is not present in the `dcc-storage-schema`
-directory.  In order to get the client, you need to be given the tarball since it contains sensitive
-information and an access key.  See our private [S3 bucket](https://s3-us-west-2.amazonaws.com/beni-dcc-storage-dev/ucsc-storage-client.tar.gz)
+directory.  In order to get the client, you need to be given an access key and download our client tarball.  See our public [S3 bucket](https://s3-us-west-2.amazonaws.com/beni-dcc-storage-dev/20161216_ucsc-storage-client.tar.gz)
 for the tarball.
 
 If you have the directory setup and don't pass in `--skip-upload` the upload will take place.  Keep this in
@@ -87,6 +93,39 @@ mind if you're just testing the metadata components and don't want to create a t
 the fact data linked to from the `sample.tsv` the program and project will both be TEST which should make
 it easy to avoid in the future. The file is based on [this](https://docs.google.com/spreadsheets/d/13fqil92C-Evi-4cy_GTnzNMmrD0ssuSCx3-cveZ4k70/edit?usp=sharing) google doc.
 
+**NOTE:** Here's a new template I'm working on that now includes tissue: [20170104 - Sample Upload Metadata Doc](https://docs.google.com/spreadsheets/d/1xuPS8ogphvvNrdJ8gRDlqFf-9fLQh9Pj1Zgx1mnUyeA/edit#gid=0)
+
+And I think we should use [BRENDA](http://www.brenda-enzymes.org/ontology.php?ontology_id=3) for the tissue ontology.  E.g. prostate would be officially "prostate gland" which corresponds to BTO:0001129 
+
+ICGC is using a limited list of hard-coded terms for primary tissues based on [this](http://docs.icgc.org/submission/projects/). So not super generic for what we’re doing.
+
+**NOTE:** you may need to modify the storage and metadata service URLs used via the `--metadata-server-url` and `--storage-server-url` parameters if you are using a non-production storage system.
+
+## Upload Simulation
+
+Perform multiple uploads in order to generate data for testing.
+
+### simulate_upload.py
+
+This script runs an unlimited number of BAM file uploads at random intervals.  The script will run until killed.
+
+    # FIXME
+    cd luigi_task_executor
+    python simulate_upload.py --bam-url https://s3.amazonaws.com/oconnor-test-bucket/sample-data/NA12878.chrom20.ILLUMINA.bwa.CEU.low_coverage.20121211.bam \
+    --input-metadata-schema ../input_metadata.json --metadata-schema ../metadata_schema.json --output-dir output_metadata --receipt-file receipt.tsv \
+    --storage-access-token `cat ../ucsc-storage2-client/accessToken` --metadata-server-url https://storage2.ucsc-cgl.org:8444 \
+    --storage-server-url https://storage2.ucsc-cgl.org:5431  --ucsc-storage-client-path ../ucsc-storage2-client
+
+Another script, this time it simulates the upload of fastq files:
+
+    cd simulated_uploaders
+    python simulate_upload_rnaseq_fastq.py --fastq-r1-path \
+    https://s3.amazonaws.com/oconnor-test-bucket/sample-data/ERR030886_1.fastq.gz \
+    --fastq-r2-path https://s3.amazonaws.com/oconnor-test-bucket/sample-data/ERR030886_2.fastq.gz \
+    --input-metadata-schema ../schemas/input_metadata.json --metadata-schema ../schemas/metadata_schema.json \
+    --output-dir output_metadata --receipt-file receipt.tsv \
+    --storage-access-token `cat ../accessToken` --metadata-server-url https://storage2.ucsc-cgl.org:8444 \
+    --storage-server-url https://storage2.ucsc-cgl.org:5431  --ucsc-storage-client-path ../ucsc-storage-client
 
 ## Data Types
 

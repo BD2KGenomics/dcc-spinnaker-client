@@ -90,3 +90,6 @@ ENV/
 
 # project specific
 output_metadata
+ucsc-storage-client
+ucsc-storage-client.tar.gz
+accessToken

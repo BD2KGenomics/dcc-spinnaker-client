@@ -3,8 +3,8 @@
 #
 # See "helper client" in https://ucsc-cgl.atlassian.net/wiki/display/DEV/Storage+Service+-+Functional+Spec
 #
-# The upload portion of this script requires external java8 jars and other files from the private S3 bucket at <https://s3-us-west-2.amazonaws.com/beni-dcc-storage-dev/ucsc-storage-client.tar.gz>
-# MAY2016	chrisw
+# Original author: Chris Wong
+# Edited by: Teo Fleming (updated to work in Dockerized Spinnaker client)
 
 # imports
 import logging
@@ -39,8 +39,6 @@ def getOptions():
     description_text.append("3- Each data bundle upload is registered with the server. A manifest.txt file is generated in this step.")
     description_text.append("4- Each data bundle upload is uploaded to the server.")
     description_text.append("5- Newly assigned UUIDs for the upload are recorded in an upload receipt file.")
-    description_text.append("The ucsc-storage-client directory must be installed in the same directory that this tool is run.")
-
 
     parser = OptionParser(usage="\n".join(usage_text), description="\n".join(description_text))
     parser.add_option("-v", "--verbose", action="store_true", default=False, dest="verbose", help="Switch for verbose mode.")
@@ -57,6 +55,7 @@ def getOptions():
     parser.add_option("--storage-access-token", action="store", default="NA", type="string", dest="awsAccessToken", help="access token for AWS looks something like 12345678-abcd-1234-abcdefghijkl.")
     parser.add_option("--metadata-server-url", action="store", default="https://storage.ucsc-cgl.org:8444", type="string", dest="metadataServerUrl", help="URL for metadata server.")
     parser.add_option("--storage-server-url", action="store", default="https://storage.ucsc-cgl.org:5431", type="string", dest="storageServerUrl", help="URL for storage server.")
+    parser.add_option("--storage-client-path", action="store", default="ucsc-storage-client", type="string", dest="storageClientPath", help="Path to storage client.")
     parser.add_option("--force-upload", action="store_true", default=False, dest="force_upload", help="Switch to force upload in case object ID already exists remotely. Overwrites existing bundle.")
 
     (options, args) = parser.parse_args()
@@ -330,6 +329,7 @@ def getWorkflowObjects(flatMetadataObjs):
             workflowObj["specimen"].append(specObj)
             specObj["submitter_specimen_id"] = metaObj["submitter_specimen_id"]
             specObj["submitter_specimen_type"] = metaObj["submitter_specimen_type"]
+            specObj["submitter_experimental_design"] = metaObj["submitter_experimental_design"]
             specObj["specimen_uuid"] = metaObj["specimen_uuid"]
             specObj["samples"] = []
 
@@ -425,7 +425,7 @@ def setupLogging(logfileName, logFormat, logLevel, logToConsole=True):
         logging.getLogger('').addHandler(console)
     return None
 
-def registerBundleUpload(metadataUrl, bundleDir, accessToken):
+def registerBundleUpload(metadataUrl, bundleDir, accessToken, storageClientPath):
      """
      java
          -Djavax.net.ssl.trustStore=ssl/cacerts
@@ -439,8 +439,9 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
      """
      success = True
 
-     metadataClientJar = "ucsc-storage-client/dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar"
-     trustStore = "ucsc-storage-client/ssl/cacerts"
+     #metadataClientJar = "/dcc-metadata-client/lib/dcc-metadata-client.jar"
+     metadataClientJar = storageClientPath+"/dcc-metadata-client-0.0.16-SNAPSHOT/lib/dcc-metadata-client.jar"
+     trustStore = storageClientPath+"/ssl/cacerts"
      trustStorePw = "changeit"
 
      # build command string
@@ -456,7 +457,7 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
      command = " ".join(command)
 
      # !!! This may expose the access token !!!
-#      logging.debug("register upload command:\t%s" % (command))
+#     logging.debug("register upload command:\t%s" % (command))
 
      try:
          output = subprocess.check_output(command, cwd=os.getcwd(), stderr=subprocess.STDOUT, shell=True)
@@ -470,7 +471,7 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
 
      return success
 
-def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=False):
+def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, storageClientPath, force=False):
     """
     Java
         -Djavax.net.ssl.trustStore=ssl/cacerts
@@ -485,8 +486,9 @@ def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=F
     """
     success = True
 
-    storageClientJar = "ucsc-storage-client/icgc-storage-client-1.0.14-SNAPSHOT/lib/icgc-storage-client.jar"
-    trustStore = "ucsc-storage-client/ssl/cacerts"
+    #storageClientJar = "/icgc-storage-client/lib/icgc-storage-client.jar"
+    storageClientJar = storageClientPath+"/icgc-storage-client-1.0.14-SNAPSHOT/lib/icgc-storage-client.jar"
+    trustStore = storageClientPath+"/ssl/cacerts"
     trustStorePw = "changeit"
 
     # build command string
@@ -562,7 +564,7 @@ def collectReceiptData(manifestData, metadataObj):
     '''
     collect the data for the upload receipt file
     The required fields are:
-    program project center_name submitter_donor_id donor_uuid submitter_specimen_id specimen_uuid submitter_specimen_type submitter_sample_id sample_uuid analysis_type workflow_name workflow_version file_type file_path file_uuid bundle_uuid metadata_uuid
+    program project center_name submitter_donor_id donor_uuid submitter_specimen_id specimen_uuid submitter_specimen_type submitter_experimental_design submitter_sample_id sample_uuid analysis_type workflow_name workflow_version file_type file_path file_uuid bundle_uuid metadata_uuid
     '''
     collectedData = []
 
@@ -576,6 +578,7 @@ def collectReceiptData(manifestData, metadataObj):
     commonData["submitter_specimen_id"] = metadataObj["specimen"][0]["submitter_specimen_id"]
     commonData["specimen_uuid"] = metadataObj["specimen"][0]["specimen_uuid"]
     commonData["submitter_specimen_type"] = metadataObj["specimen"][0]["submitter_specimen_type"]
+    commonData["submitter_experimental_design"] = metadataObj["specimen"][0]["submitter_experimental_design"]
 
     commonData["submitter_sample_id"] = metadataObj["specimen"][0]["samples"][0]["submitter_sample_id"]
     commonData["sample_uuid"] = metadataObj["specimen"][0]["samples"][0]["sample_uuid"]
@@ -604,7 +607,7 @@ def writeReceipt(collectedReceipts, receiptFileName, d="\t"):
     write an upload receipt file
     '''
     with open(receiptFileName, 'w') as receiptFile:
-        fieldnames = ["program", "project", "center_name", "submitter_donor_id", "donor_uuid", "submitter_specimen_id", "specimen_uuid", "submitter_specimen_type", "submitter_sample_id", "sample_uuid", "analysis_type", "workflow_name", "workflow_version", "file_type", "file_path", "file_uuid", "bundle_uuid", "metadata_uuid"]
+        fieldnames = ["program", "project", "center_name", "submitter_donor_id", "donor_uuid", "submitter_specimen_id", "specimen_uuid", "submitter_specimen_type", "submitter_experimental_design", "submitter_sample_id", "sample_uuid", "analysis_type", "workflow_name", "workflow_version", "file_type", "file_path", "file_uuid", "bundle_uuid", "metadata_uuid"]
         writer = csv.DictWriter(receiptFile, fieldnames=fieldnames, delimiter=d)
 
         writer.writeheader()
@@ -771,8 +774,8 @@ def main():
             fileDataList = getDataDictFromXls(fileName)
         except Exception as exc:
             # attempt to process as tsv file
-            logging.info("couldn't read %s as excel file" % fileName)
-            logging.info("---now trying to read as tsv file")
+            # logging.info("couldn't read %s as excel file" % fileName)
+            # logging.info("---now trying to read as tsv file")
             fileLines = readFileLines(fileName)
             reader = readTsv(fileLines)
             fileDataList = processFieldNames(reader)
@@ -844,7 +847,7 @@ def main():
             bundle_uuid = dirName
 
             # register upload
-            args = {"accessToken":options.awsAccessToken, "bundleDir":dirName, "metadataUrl":options.metadataServerUrl}
+            args = {"accessToken":options.awsAccessToken, "bundleDir":dirName, "metadataUrl":options.metadataServerUrl, "storageClientPath":options.storageClientPath}
             regSuccess = registerBundleUpload(**args)
 
             # perform upload
@@ -852,6 +855,7 @@ def main():
             if regSuccess:
                 args["storageUrl"] = options.storageServerUrl
                 args["force"] = options.force_upload
+                args["storageClientPath"] = options.storageClientPath
                 upSuccess = performBundleUpload(**args)
             else:
                 counts["failedRegistration"].append(bundle_uuid)
