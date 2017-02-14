@@ -221,7 +221,7 @@ def getDataObj(dict, schema):
 
     dataObj = {}
     for propName in propNames:
-        dataObj[propName] = dict[propName]
+        dataObj[propName] = getValueFromObject(dict, propName) # dict[propName]
 
     if "workflow_uuid" in dict.keys():
         dataObj["workflow_uuid"] = dict["workflow_uuid"]
