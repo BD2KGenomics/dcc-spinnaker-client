@@ -359,6 +359,7 @@ def getWorkflowObjects(flatMetadataObjs):
             workflowObj["specimen"].append(specObj)
             specObj["submitter_specimen_id"] = metaObj["submitter_specimen_id"]
             specObj["submitter_specimen_type"] = metaObj["submitter_specimen_type"]
+            specObj["submitter_experimental_design"] = metaObj["submitter_experimental_design"]
             specObj["specimen_uuid"] = metaObj["specimen_uuid"]
             specObj["samples"] = []
 
@@ -538,7 +539,7 @@ def registerBundleUpload(metadataUrl, bundleDir, accessToken):
     return success
 
 
-def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=False):
+def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, storageClientPath, force=False):
     """
     Java
         -Djavax.net.ssl.trustStore=ssl/cacerts
@@ -627,6 +628,7 @@ def collectReceiptData(manifestData, metadataObj):
     commonData["submitter_specimen_id"] = metadataObj["specimen"][0]["submitter_specimen_id"]
     commonData["specimen_uuid"] = metadataObj["specimen"][0]["specimen_uuid"]
     commonData["submitter_specimen_type"] = metadataObj["specimen"][0]["submitter_specimen_type"]
+    commonData["submitter_experimental_design"] = metadataObj["specimen"][0]["submitter_experimental_design"]
 
     commonData["submitter_sample_id"] = \
         metadataObj["specimen"][0]["samples"][0]["submitter_sample_id"]
@@ -661,11 +663,7 @@ def writeReceipt(collectedReceipts, receiptFileName, d="\t"):
     write an upload receipt file
     '''
     with open(receiptFileName, 'w') as receiptFile:
-        fieldnames = ["program", "project", "center_name", "submitter_donor_id",
-                      "donor_uuid", "submitter_specimen_id", "specimen_uuid",
-                      "submitter_specimen_type", "submitter_sample_id", "sample_uuid",
-                      "analysis_type", "workflow_name", "workflow_version", "file_type",
-                      "file_path", "file_uuid", "bundle_uuid", "metadata_uuid"]
+        fieldnames = ["program", "project", "center_name", "submitter_donor_id", "donor_uuid", "submitter_specimen_id", "specimen_uuid", "submitter_specimen_type", "submitter_experimental_design", "submitter_sample_id", "sample_uuid", "analysis_type", "workflow_name", "workflow_version", "file_type", "file_path", "file_uuid", "bundle_uuid", "metadata_uuid"]
         writer = csv.DictWriter(receiptFile, fieldnames=fieldnames, delimiter=d)
 
         writer.writeheader()
