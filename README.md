@@ -1,8 +1,117 @@
-# spinnaker-client
+# spinnaker-client (core-client)
+Analysis Core Submission Client
 
 ## Introduction
 
 The submission system client that uploads data/metadata to Redwood and indicates to the Spinnaker web service that a submission bundle is ready for validation.
+
+## For Users
+You'll need [Docker](https://docs.docker.com/engine/installation/) and a Redwood access token.
+
+### Upload Data
+Create a `manifest.tsv` based on this (see template [here](https://docs.google.com/spreadsheets/d/13fqil92C-Evi-4cy_GTnzNMmrD0ssuSCx3-cveZ4k70/edit?usp=sharing)): _Program, Project, Center Name, Submitter Donor ID, Donor UUID, Submitter Specimen ID, Specimen UUID, Submitter Specimen Type, Submitter Experimental Design, Submitter Sample ID, Sample UUID, Analysis Type, Workflow Name, Workflow Version File Type, File Path, Upload File ID, Data Bundle ID, Metadata.json_. See below for more details. Then run:
+
+```
+docker run --rm -it -e ACCESS_TOKEN=<access_token> -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v `pwd`:/dcc/data quay.io/ucsc_cgl/core-client:1.0.1 spinnaker-upload /dcc/data/manifest.tsv
+```
+
+Make sure you replace `<access_token>` with your access token and mount in your data such that the 'File Path' correctly points to the data within the docker container.
+
+Once completed, you will find a receipt file (`spinnaker/output_metadata/receipt.tsv`) which you should save. It provides various IDs assigned to your donor, specimen, sample and file that make it much easier to find/audit later.
+
+NOTE: Uploads can take a long time and our feedback on the command line needs to be improved. I suggest using a tool like `dstat` to monitor network usage to ensure uploads are in progress.
+
+
+### Download Data (via Manifest)
+This assumes the current working directory (`pwd`) has a manifest, like the ones you can download from http://ucsc-cgl.org/file_browser/.  The command below will then download the files to the current working directory.  
+
+NOTE: make sure you have enough space in `pwd`!!!
+
+    docker run --rm -e ACCESS_TOKEN=<access_token> -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v `pwd`:/dcc/data quay.io/ucsc_cgl/core-client:1.0.1 redwood-download /dcc/data/manifest.tsv /dcc/data/
+
+### Download by id
+You can also download a single file by its unique id (not bundle id):
+
+    docker run --rm -e ACCESS_TOKEN=<access_token> -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v `pwd`:/dcc/data quay.io/ucsc_cgl/core-client:1.0.1 download <object-id> /dcc/data/
+
+### Metadata Spreadsheet Column Details
+The contents of your metadata spreadsheet will dictate how the analysis core handles your data (jobs run, etc.).
+
+#### Data Types
+
+We support the following types.  First and foremost, the types below are just intended
+to be an overview. We need to standardize on actual acceptable terms. To do this
+we use the Codelists (controlled vocabularies) from the ICGC.  See http://docs.icgc.org/dictionary/viewer/#?viewMode=codelist
+
+In the future we will validate metadata JSON against these codelists via the Spinnaker service.
+
+#### Sample Types:
+
+* dna normal
+* dna tumor
+* rna tumor
+* rna normal (rare)
+
+And there are others as well but these are the major ones we'll encounter for now.
+
+The actual values should come from the ICGC Codelist above.  Specifically the
+`specimen.0.specimen_type.v3` codelist.
+
+#### Experimental Design Types
+
+* WXS
+* WGS
+* Gene Panel
+* RNAseq
+
+The actual values should come from the ICGC Codelist above.  Specifically the
+`GLOBAL.0.sequencing_strategy.v1` codelist.
+
+#### File Types/Formats
+
+* sequence/fastq
+* sequence/unaligned BAM
+* alignment/BAM & BAI pair
+* expression/RSEM(?)
+* variants/VCF
+
+These will all come from the [EDAM Ontology](http://edamontology.org).  They have
+a mechanism to add terms as needed.
+
+#### Analysis Types
+
+* germline_variant_calling -> normal specimen level
+* rna_quantification (and various other RNASeq-based analysis) -> tumor specimen level
+* somatic_variant_calling -> tumor specimen level (or donor if called simultaneously for multiple tumors)
+* immuno_target_pipelines -> tumor specimen level
+
+Unfortunately, the CVs from ICGC don't cover the above, see [here](http://docs.icgc.org/dictionary/viewer/#?viewMode=table).
+Look for items like `variation_calling_algorithm` and you'll see they are actually just
+TEXT with a regular expression to validate them.
+
+Take home, I think we use our own CV for these terms and expand it over time here.
+
+I think we also need to support tagging with multiple EDAM terms as well which can,
+together, describe what I'm trying to capture above.  For example:
+
+germline_variant_calling could be:
+
+* [Variant calling](http://edamontology.org/operation_3227): http://edamontology.org/operation_3227
+
+Which isn't very specific and the description sounds closer to somatic calling.
+
+So this argues that we should actually just come up with our own specific terms
+used for the institute since we aren't attempting to capture the whole world's
+possible use cases here.
+
+Over time I think this will expand.  Each are targeted at a distinct biospecimen "level".
+This will need to be incorporated into changes to the index builder.
+
+## For Developers
+
+For developing the spinnaker client
+
+### Overview
 
 This repo contains several items relate to metadata JSONs used to describe biospecimen and analysis events for the core.
 
@@ -10,7 +119,15 @@ First, there are JSON schema, see `analysis_flattened.json` and `biospecimen_fla
 
 Second, this repo contains a `spinnaker.py` script that takes a TSV format and converts it into metadata JSON documents (and also has an option for uploading, we use this for bulk uploads to our system).
 
-## Git Process
+### Quick Tips
+
+Build docker image with:
+```
+docker build -t quay.io/ucsc_cgl/core-client:dev
+```
+
+
+### Git Process
 
 We use [HubFlow](https://datasift.github.io/gitflow/GitFlowForGitHub.html) for our feature branch/release process.
 
@@ -19,15 +136,15 @@ We use [HubFlow](https://datasift.github.io/gitflow/GitFlowForGitHub.html) for o
 * make features on feature branches
 * candidate release branches are created right before a release
 
-## Install
+### Install
 
-### Ubuntu 14.04
+#### Ubuntu 14.04
 
 You need to make sure you have system level dependencies installed in the appropriate way for your OS.  For Ubuntu 14.04 you do:
 
     sudo apt-get install python-dev libxml2-dev libxslt-dev lib32z1-dev
 
-### Python
+#### Python
 
 Use python 2.7.x.
 
@@ -53,7 +170,7 @@ Alternatively, you may want to use Conda, see [here](http://conda.pydata.org/doc
     source activate schemas-project
     pip install jsonschema jsonmerge openpyxl sets json-spec elasticsearch semver luigi
 
-## Generate Test Metadata (and Optionally Upload Data to Storage Service)
+### Generate Test Metadata (and Optionally Upload Data to Storage Service)
 
 First, create a file for your access token e.g. `accessToken`.
 
@@ -82,7 +199,7 @@ In case there are already existing bundle ID's that cause a collision on the S3 
 
 Now look in the `output_metadata` directory for per-bundle directories that contain metadata files for each analysis workflow.
 
-### Enabling Upload
+#### Enabling Upload
 
 By default the upload won't take place if the directory `ucsc-storage-client` is not present in the `dcc-storage-schema`
 directory.  In order to get the client, you need to be given the tarball since it contains sensitive
@@ -95,73 +212,3 @@ the fact data linked to from the `sample.tsv` the program and project will both 
 it easy to avoid in the future. The file is based on [this](https://docs.google.com/spreadsheets/d/13fqil92C-Evi-4cy_GTnzNMmrD0ssuSCx3-cveZ4k70/edit?usp=sharing) google doc.
 
 **NOTE:** you may need to modify the storage and metadata service URLs used via the `--metadata-server-url` and `--storage-server-url` parameters if you are using a non-production storage system. 
-
-## Data Types
-
-We support the following types.  First and foremost, the types below are just intended
-to be an overview. We need to standardize on actual acceptable terms. To do this
-we use the Codelists (controlled vocabularies) from the ICGC.  See http://docs.icgc.org/dictionary/viewer/#?viewMode=codelist
-
-In the future we will validate metadata JSON against these codelists via the Spinnaker service.
-
-### Sample Types:
-
-* dna normal
-* dna tumor
-* rna tumor
-* rna normal (rare)
-
-And there are others as well but these are the major ones we'll encounter for now.
-
-The actual values should come from the ICGC Codelist above.  Specifically the
-`specimen.0.specimen_type.v3` codelist.
-
-### Experimental Design Types
-
-* WXS
-* WGS
-* Gene Panel
-* RNAseq
-
-The actual values should come from the ICGC Codelist above.  Specifically the
-`GLOBAL.0.sequencing_strategy.v1` codelist.
-
-### File Types/Formats
-
-* sequence/fastq
-* sequence/unaligned BAM
-* alignment/BAM & BAI pair
-* expression/RSEM(?)
-* variants/VCF
-
-These will all come from the [EDAM Ontology](http://edamontology.org).  They have
-a mechanism to add terms as needed.
-
-### Analysis Types
-
-* germline_variant_calling -> normal specimen level
-* rna_quantification (and various other RNASeq-based analysis) -> tumor specimen level
-* somatic_variant_calling -> tumor specimen level (or donor if called simultaneously for multiple tumors)
-* immuno_target_pipelines -> tumor specimen level
-
-Unfortunately, the CVs from ICGC don't cover the above, see [here](http://docs.icgc.org/dictionary/viewer/#?viewMode=table).
-Look for items like `variation_calling_algorithm` and you'll see they are actually just
-TEXT with a regular expression to validate them.
-
-Take home, I think we use our own CV for these terms and expand it over time here.
-
-I think we also need to support tagging with multiple EDAM terms as well which can,
-together, describe what I'm trying to capture above.  For example:
-
-germline_variant_calling could be:
-
-* [Variant calling](http://edamontology.org/operation_3227): http://edamontology.org/operation_3227
-
-Which isn't very specific and the description sounds closer to somatic calling.
-
-So this argues that we should actually just come up with our own specific terms
-used for the institute since we aren't attempting to capture the whole world's
-possible use cases here.
-
-Over time I think this will expand.  Each are targeted at a distinct biospecimen "level".
-This will need to be incorporated into changes to the index builder.

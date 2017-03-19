@@ -1,3 +1,4 @@
 .git
 *.pyc
-/outputs/
+outputs/
+.idea
