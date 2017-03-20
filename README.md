@@ -2,43 +2,73 @@
 Analysis Core Submission Client
 
 ## Introduction
-
 The submission system client that uploads data/metadata to Redwood and indicates to the Spinnaker web service that a submission bundle is ready for validation.
 
 ## For Users
 You'll need [Docker](https://docs.docker.com/engine/installation/) and a Redwood access token.
 
+### Configuration
+All users need to do this in order to use the client.
+
+See the underlying [dcc-redwood-client docs](https://github.com/BD2KGenomics/dcc-redwood-client/tree/1.1.0#getting-started) for details on how to configure the client. In short:
+```
+wget https://raw.githubusercontent.com/BD2KGenomics/dcc-redwood-client/develop/src/main/conf/application-redwood.properties
+```
+
+Then edit the file to specify your Redwood access token.
+
 ### Upload Data
-Create a `manifest.tsv` based on this (see template [here](https://docs.google.com/spreadsheets/d/13fqil92C-Evi-4cy_GTnzNMmrD0ssuSCx3-cveZ4k70/edit?usp=sharing)): _Program, Project, Center Name, Submitter Donor ID, Donor UUID, Submitter Specimen ID, Specimen UUID, Submitter Specimen Type, Submitter Experimental Design, Submitter Sample ID, Sample UUID, Analysis Type, Workflow Name, Workflow Version File Type, File Path, Upload File ID, Data Bundle ID, Metadata.json_. See below for more details. Then run:
+Create a `manifest.tsv` (or `manifest.xlsx`) like this example [spreadsheet](https://docs.google.com/spreadsheets/d/13fqil92C-Evi-4cy_GTnzNMmrD0ssuSCx3-cveZ4k70/edit?usp=sharing) or [tsv](manifests/three_manifest.tsv). See below for more details. Then run:
 
 ```
-docker run --rm -it -e ACCESS_TOKEN=<access_token> -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v `pwd`:/dcc/data quay.io/ucsc_cgl/core-client:1.0.1 spinnaker-upload /dcc/data/manifest.tsv
+docker run -it -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/dcc/data -v $(pwd)/outputs:/outputs quay.io/ucsc_cgl/core-client:1.0.1 spinnaker-upload /manifests/manifest.tsv
 ```
 
-Make sure you replace `<access_token>` with your access token and mount in your data such that the 'File Path' correctly points to the data within the docker container.
+Make sure 'File Path' correctly locates the data where it's mounted into the docker container.
 
-Once completed, you will find a receipt file (`spinnaker/output_metadata/receipt.tsv`) which you should save. It provides various IDs assigned to your donor, specimen, sample and file that make it much easier to find/audit later.
+If you're re-uploading newer versions of files already tracked in the storage system, use command-line flag `--force-upload`.
+
+Once upload completes, you will find a receipt file (`/outputs/receipt.tsv`) which you should save. It provides various IDs assigned to your donor, specimen, sample and file that make it much easier to find/audit later.
 
 NOTE: Uploads can take a long time and our feedback on the command line needs to be improved. I suggest using a tool like `dstat` to monitor network usage to ensure uploads are in progress.
 
-
 ### Download Data (via Manifest)
-This assumes the current working directory (`pwd`) has a manifest, like the ones you can download from http://ucsc-cgl.org/file_browser/.  The command below will then download the files to the current working directory.  
+This assumes the current working directory (`pwd`) has a manifest, like the ones you can download from http://ucsc-cgl.org/file_browser/.  The command below will then download the files to the current working directory.
 
-NOTE: make sure you have enough space in `pwd`!!!
+NOTE: make sure you have enough space in `pwd`
+```
+docker run -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/dcc/data -v $(pwd)/outputs quay.io/ucsc_cgl/core-client:1.0.1 redwood-download /dcc/data/manifest.tsv /dcc/data/
+```
 
-    docker run --rm -e ACCESS_TOKEN=<access_token> -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v `pwd`:/dcc/data quay.io/ucsc_cgl/core-client:1.0.1 redwood-download /dcc/data/manifest.tsv /dcc/data/
-
-### Download by id
+### Download Data (by id)
 You can also download a single file by its unique id (not bundle id):
-
-    docker run --rm -e ACCESS_TOKEN=<access_token> -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v `pwd`:/dcc/data quay.io/ucsc_cgl/core-client:1.0.1 download <object-id> /dcc/data/
+````
+docker run -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/dcc/data quay.io/ucsc_cgl/core-client:1.0.1 download <object-id> /dcc/data/
+```
 
 ### Metadata Spreadsheet Column Details
-The contents of your metadata spreadsheet will dictate how the analysis core handles your data (jobs run, etc.).
+The contents of your metadata spreadsheet will dictate how the analysis core handles your data (jobs run, etc.).  The full list of columns is:
+- Program
+- Project
+- Center Name
+- Submitter Donor ID
+- Donor UUID
+- Submitter Specimen ID
+- Specimen UUID
+- Submitter Specimen Type
+- Submitter Experimental Design
+- Submitter Sample ID
+- Submitter Donor Primary Site
+- Sample UUID
+- Analysis Type
+- Workflow Name
+- Workflow Version File Type
+- File Path
+- Upload File ID
+- Data Bundle ID
+- Metadata.json
 
 #### Data Types
-
 We support the following types.  First and foremost, the types below are just intended
 to be an overview. We need to standardize on actual acceptable terms. To do this
 we use the Codelists (controlled vocabularies) from the ICGC.  See http://docs.icgc.org/dictionary/viewer/#?viewMode=codelist
@@ -46,7 +76,6 @@ we use the Codelists (controlled vocabularies) from the ICGC.  See http://docs.i
 In the future we will validate metadata JSON against these codelists via the Spinnaker service.
 
 #### Sample Types:
-
 * dna normal
 * dna tumor
 * rna tumor
@@ -58,7 +87,6 @@ The actual values should come from the ICGC Codelist above.  Specifically the
 `specimen.0.specimen_type.v3` codelist.
 
 #### Experimental Design Types
-
 * WXS
 * WGS
 * Gene Panel
@@ -68,7 +96,6 @@ The actual values should come from the ICGC Codelist above.  Specifically the
 `GLOBAL.0.sequencing_strategy.v1` codelist.
 
 #### File Types/Formats
-
 * sequence/fastq
 * sequence/unaligned BAM
 * alignment/BAM & BAI pair
@@ -79,7 +106,6 @@ These will all come from the [EDAM Ontology](http://edamontology.org).  They hav
 a mechanism to add terms as needed.
 
 #### Analysis Types
-
 * germline_variant_calling -> normal specimen level
 * rna_quantification (and various other RNASeq-based analysis) -> tumor specimen level
 * somatic_variant_calling -> tumor specimen level (or donor if called simultaneously for multiple tumors)
@@ -108,11 +134,9 @@ Over time I think this will expand.  Each are targeted at a distinct biospecimen
 This will need to be incorporated into changes to the index builder.
 
 ## For Developers
-
 For developing the spinnaker client
 
 ### Overview
-
 This repo contains several items relate to metadata JSONs used to describe biospecimen and analysis events for the core.
 
 First, there are JSON schema, see `analysis_flattened.json` and `biospecimen_flattened.json`.
@@ -120,15 +144,14 @@ First, there are JSON schema, see `analysis_flattened.json` and `biospecimen_fla
 Second, this repo contains a `spinnaker.py` script that takes a TSV format and converts it into metadata JSON documents (and also has an option for uploading, we use this for bulk uploads to our system).
 
 ### Quick Tips
-
 Build docker image with:
 ```
 docker build -t quay.io/ucsc_cgl/core-client:dev
 ```
 
+Run Redwood in dev mode via [dcc-ops](https://github.com/BD2KGenomics/dcc-ops) to test upload.
 
 ### Git Process
-
 We use [HubFlow](https://datasift.github.io/gitflow/GitFlowForGitHub.html) for our feature branch/release process.
 
 * `master` is the stable release branch
@@ -139,13 +162,11 @@ We use [HubFlow](https://datasift.github.io/gitflow/GitFlowForGitHub.html) for o
 ### Install
 
 #### Ubuntu 14.04
-
 You need to make sure you have system level dependencies installed in the appropriate way for your OS.  For Ubuntu 14.04 you do:
 
     sudo apt-get install python-dev libxml2-dev libxslt-dev lib32z1-dev python-setuptools build-essential
 
 #### Python
-
 Use python 2.7.x.
 
 See [here](https://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/) for information on setting up a virtual environment for Python.
@@ -171,7 +192,6 @@ Alternatively, you may want to use Conda, see [here](http://conda.pydata.org/doc
     pip install jsonschema jsonmerge openpyxl sets json-spec elasticsearch semver luigi
 
 ### Generate Test Metadata (and Optionally Upload Data to Storage Service)
-
 First, create a file for your access token e.g. `accessToken`.
 
 We need to create a bunch of JSON documents for multiple donors and multiple
@@ -200,7 +220,6 @@ In case there are already existing bundle ID's that cause a collision on the S3 
 Now look in the `output_metadata` directory for per-bundle directories that contain metadata files for each analysis workflow.
 
 #### Enabling Upload
-
 By default the upload won't take place if the directory `ucsc-storage-client` is not present in the `dcc-storage-schema`
 directory.  In order to get the client, you need to be given an access key and download our client tarball.  See our public [S3 bucket](https://s3-us-west-2.amazonaws.com/beni-dcc-storage-dev/20161216_ucsc-storage-client.tar.gz)
 for the tarball.
@@ -219,11 +238,9 @@ ICGC is using a limited list of hard-coded terms for primary tissues based on [t
 **NOTE:** you may need to modify the storage and metadata service URLs used via the `--metadata-server-url` and `--storage-server-url` parameters if you are using a non-production storage system.
 
 ## Upload Simulation
-
 Perform multiple uploads in order to generate data for testing.
 
 ### simulate_upload.py
-
 This script runs an unlimited number of BAM file uploads at random intervals.  The script will run until killed.
 
     # FIXME
@@ -245,7 +262,6 @@ Another script, this time it simulates the upload of fastq files:
     --storage-server-url https://storage2.ucsc-cgl.org:5431  --ucsc-storage-client-path ../ucsc-storage-client
 
 ## Data Types
-
 We support the following types.  First and foremost, the types below are just intended
 to be an overview. We need to standardize on actual acceptable terms. To do this
 we use the Codelists (controlled vocabularies) from the ICGC.  See http://docs.icgc.org/dictionary/viewer/#?viewMode=codelist
@@ -253,7 +269,6 @@ we use the Codelists (controlled vocabularies) from the ICGC.  See http://docs.i
 In the future we will validate metadata JSON against these codelists via the Spinnaker service.
 
 ### Sample Types:
-
 * dna normal
 * dna tumor
 * rna tumor
@@ -265,7 +280,6 @@ The actual values should come from the ICGC Codelist above.  Specifically the
 `specimen.0.specimen_type.v3` codelist.
 
 ### Experimental Design Types
-
 * WXS
 * WGS
 * Gene Panel
@@ -275,7 +289,6 @@ The actual values should come from the ICGC Codelist above.  Specifically the
 `GLOBAL.0.sequencing_strategy.v1` codelist.
 
 ### File Types/Formats
-
 * sequence/fastq
 * sequence/unaligned BAM
 * alignment/BAM & BAI pair
@@ -286,7 +299,6 @@ These will all come from the [EDAM Ontology](http://edamontology.org).  They hav
 a mechanism to add terms as needed.
 
 ### Analysis Types
-
 * germline_variant_calling -> normal specimen level
 * rna_quantification (and various other RNASeq-based analysis) -> tumor specimen level
 * somatic_variant_calling -> tumor specimen level (or donor if called simultaneously for multiple tumors)
