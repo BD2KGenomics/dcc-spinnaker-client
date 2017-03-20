@@ -13,7 +13,7 @@ upload: clean
 		dcc-spinnaker-client \
 		--submission-server-url http://spinnaker.medbook.io:5000 \
 		--force-upload \
-		/manifests/three_manifest.tsv
+		/manifests/two_manifest.tsv
 
 skip_submit: clean
 	docker run -it --rm \
@@ -27,7 +27,7 @@ skip_submit: clean
 		dcc-spinnaker-client \
 		--force-upload \
 		--skip-submit \
-		/manifests/three_manifest.tsv
+		/manifests/two_manifest.tsv
 
 debug: clean
 	docker run -it --rm --entrypoint=/bin/bash \
