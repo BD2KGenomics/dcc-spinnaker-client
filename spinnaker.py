@@ -59,7 +59,7 @@ def getOptions():
                       dest="metadataSchemaFileName",
                       help="flattened json schema file for metadata")
     parser.add_option("--registration-file", action="store", default="registration.tsv", type="string",
-                      dest="redwoodRegistrationFile",
+                      dest="redwood_registration_file",
                       help="file to write Redwood metadata upload registration manifest in. Existing file will be overwritten.")
     parser.add_option("-d", "--output-dir", action="store", default="/outputs", type="string",
                       dest="metadataOutDir",
@@ -459,14 +459,16 @@ def setupLogging(logfileName, logFormat, logLevel, logToConsole=True):
         logging.getLogger('').addHandler(console)
     return None
 
-def addToRegistration(registration, bundle_id, project, file_path, controlled_access):
+
+def add_to_registration(registration, bundle_id, project, file_path, controlled_access):
     with open(file_path, 'r') as f:
         hash = hashlib.md5()
         hash.update(f.read())
         access = 'controlled' if controlled_access else 'open'
         registration.write('{}\t{}\t{}\t{}\t{}\n'.format(bundle_id, project, file_path, hash.hexdigest(), access))
 
-def registerUpload(manifest, outdir):
+
+def register_upload(manifest, outdir):
     success = True
     command = "dcc-metadata-client -m {} -o {}".format(manifest, outdir)
     logging.info("registering upload redwood metadata: {}".format(command))
@@ -478,7 +480,8 @@ def registerUpload(manifest, outdir):
         writeJarExceptionsToLog(exc.output)        
     return success
 
-def performUpload(manifest, force):
+
+def perform_upload(manifest, force):
     success = True
     f = '--force' if force else ''
     command = "icgc-storage-client upload --manifest {} {}".format(manifest, f)
@@ -489,97 +492,6 @@ def performUpload(manifest, force):
         success = False
         logging.error("error while uploading files")
         writeJarExceptionsToLog(exc.output)
-    return success
-
-def registerBundleUpload(metadataUrl, bundleDir, accessToken):
-    """
-    java
-     -Djavax.net.ssl.trustStore=ssl/cacerts
-     -Djavax.net.ssl.trustStorePassword=changeit
-     -Dserver.baseUrl=https://storage2.ucsc-cgl.org:8444
-     -DaccessToken=${accessToken}
-     -jar dcc-metadata-client/lib/dcc-metadata-client.jar
-     -i ${upload}
-     -o ${manifest}
-     -m manifest.txt
-    """
-    success = True
-
-    metadataClientJar = "dcc-metadata-client/lib/dcc-metadata-client.jar"
-    trustStore = "ssl/cacerts"
-    trustStorePw = "changeit"
-
-    # build command string
-    command = ["java"]
-    command.append("-Djavax.net.ssl.trustStore=" + trustStore)
-    command.append("-Djavax.net.ssl.trustStorePassword=" + trustStorePw)
-    command.append("-Dserver.baseUrl=" + str(metadataUrl))
-    command.append("-DaccessToken=" + str(accessToken))
-    command.append("-jar " + metadataClientJar)
-    command.append("-i " + str(bundleDir))
-    command.append("-o " + str(bundleDir))
-    command.append("-m manifest.txt")
-    command = " ".join(command)
-
-    # !!! This may expose the access token !!!
-    logging.debug("register upload command:\t%s" % (command))
-
-    try:
-        logging.debug(command)
-        subprocess.check_output(command, cwd=os.getcwd(),
-                                stderr=subprocess.STDOUT, shell=True)
-    except Exception as exc:
-        success = False
-        # !!! logging.exception here may expose access token !!!
-        logging.error("Error while registering bundle %s" % bundleDir)
-        writeJarExceptionsToLog(exc.output)
-    finally:
-        logging.info("Finished registering bundle upload %s" % bundleDir)
-
-    return success
-
-
-def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, storageClientPath, force=False):
-    """
-    Java
-        -Djavax.net.ssl.trustStore=ssl/cacerts
-        -Djavax.net.ssl.trustStorePassword=changeit
-        -Dmetadata.url=https://storage2.ucsc-cgl.org:8444
-        -Dmetadata.ssl.enabled=true
-        -Dclient.ssl.custom=false
-        -Dstorage.url=https://storage2.ucsc-cgl.org:5431
-        -DaccessToken=${accessToken}
-        -jar icgc-storage-client/lib/icgc-storage-client.jar upload
-        --manifest ${manifest}/manifest.txt
-    """
-    success = True
-
-    # build command string
-    command = ["icgc-storage-client"]
-    command.append("upload")
-
-    # force upload in case object id already exists remotely
-    if force:
-        command.append("--force")
-
-    manifestFilePath = os.path.join(bundleDir, "manifest.txt")
-    command.append("--manifest " + manifestFilePath)
-    command = " ".join(command)
-
-    # !!! This may expose the access token !!!
-#     logging.debug("perform upload command:\t%s" % (command))
-
-    try:
-        subprocess.check_output(command, cwd=os.getcwd(),
-                                stderr=subprocess.STDOUT, shell=True)
-    except subprocess.CalledProcessError as exc:
-        success = False
-        # !!! logging.exception here may expose access token !!!
-        logging.error("Error while uploading files for bundle %s" % bundleDir)
-        writeJarExceptionsToLog(exc.output)
-    finally:
-        logging.info("done uploading bundle %s" % bundleDir)
-
     return success
 
 
@@ -595,16 +507,16 @@ def writeJarExceptionsToLog(errorOutput):
 
 
 def parseUploadManifestFile(manifestFilePath):
-    '''
+    """
     from the upload manifest file, get the file_uuid for each uploaded file
-    '''
+    """
     idMapping = {}
     fileLines = readFileLines(manifestFilePath)
     for line in fileLines:
         fields = line.split()
-        if fields[0] != "object-id" and not fields[0].startswith("#"):
+        if fields[0] != "object-id":
             file_name = os.path.basename(fields[1])
-            object_id = fields[1]
+            object_id = fields[0]
             idMapping[file_name] = object_id
     return idMapping
 
@@ -797,6 +709,7 @@ def mergeDonors(metadataObjs):
 def main():
     startTime = getNow()
     (options, args, parser) = getOptions()
+    redwood_upload_manifest_dir = "redwoodUploadManifest"
 
     if len(args) == 0:
         logging.error("no input files")
@@ -893,70 +806,74 @@ def main():
         logging.info("You can monitor the upload at {}/v0/submissions/{}".format(
             options.submissionServerUrl, submission_id))
 
-    # first pass uploads data bundles
-    with open (os.path.join(options.metadataOutDir, options.redwoodRegistrationFile), 'w') as registration:
+    # build redwood registration manifest
+    redwood_registration_manifest = os.path.join(options.metadataOutDir, options.redwood_registration_file)
+    redwood_upload_manifest = None
+    with open (redwood_registration_manifest, 'w') as registration:
         registration.write('gnos_id\tprogram_code\tfile_path\tfile_md5\taccess\n')
-        storageUploadManifest = None;
-        for dirName, subdirList, fileList in os.walk(options.metadataOutDir):
-            if dirName == options.metadataOutDir:
+        for dir_name, subdirs, files in os.walk(options.metadataOutDir):
+            if dir_name == options.metadataOutDir:
                 continue
-            if len(subdirList) != 0:
+            if len(subdirs) != 0:
                 continue
-            if "metadata.json" in fileList:
-                bundleDirFullPath = os.path.join(os.getcwd(), dirName)
+            if "metadata.json" in files:
+                bundleDirFullPath = os.path.join(os.getcwd(), dir_name)
                 logging.debug("found bundle directory at %s" % (bundleDirFullPath))
                 counts["bundlesFound"] += 1
 
                 bundle_metadata = loadJsonObj(os.path.join(bundleDirFullPath, "metadata.json"))
 
                 project = bundle_metadata["project"]
-                bundle_uuid = os.path.basename(dirName)
+                bundle_uuid = os.path.basename(dir_name)
                 controlled_access = True
-                if storageUploadManifest is None:
-                    storageUploadManifest = bundle_uuid
-                
+                if redwood_upload_manifest is None:
+                    redwood_upload_manifest = os.path.join(options.metadataOutDir, redwood_upload_manifest_dir, bundle_uuid)
+
                 # register upload
-                for file in fileList:
-                    addToRegistration(registration, bundle_uuid, project, os.path.join(dirName, file), controlled_access);
+                for f in files:
+                    file = os.path.join(dir_name, f)
+                    add_to_registration(registration, bundle_uuid, project, file, controlled_access)
             else:
-                logging.info("no metadata file found in %s" % dirName)
+                logging.info("no metadata file found in %s" % dir_name)
 
             logging.info("counts\t%s" % (json.dumps(counts)))
 
-    # submit registration to metadata-server
-    mkdir_p(os.path.join(options.metadataOutDir, "redwoodUploadManifest"))
-    regSuccess = registerUpload(os.path.join(options.metadataOutDir, options.redwoodRegistrationFile),
-                                os.path.join(options.metadataOutDir, "redwoodUploadManifest"))
-    if regSuccess:
-       performUpload(os.path.join(options.metadataOutDir, "redwoodUploadManifest", storageUploadManifest), options.force_upload)
+    # submit registration to metadata-server and perform upload
+    mkdir_p(os.path.dirname(redwood_upload_manifest))
+    reg_success = register_upload(redwood_registration_manifest, os.path.dirname(redwood_upload_manifest))
+    if reg_success:
+        if not perform_upload(redwood_upload_manifest, options.force_upload):
+            logging.error("redwood upload failed")
+            sys.exit(1)
+
     else:
         logging.error("upload registration failed")
+        sys.exit(1)
         
-    # second pass generates receipt.tsv
+    # generate receipt.tsv
     logging.info("now generate upload receipt")
-    collectedReceipts = []
-    manifestData = parseUploadManifestFile(os.path.join(options.metadataOutDir, "redwoodUploadManifest", storageUploadManifest))
+    collected_receipts = []
+    manifest_data = parseUploadManifestFile(redwood_upload_manifest)
     for dirName, subdirList, fileList in os.walk(options.metadataOutDir):
-        if dirName == options.metadataOutDir:
-            continue
-        if len(subdirList) != 0:
+        if dirName == options.metadataOutDir \
+                or os.path.basename(dirName) == redwood_upload_manifest_dir or len(subdirList) != 0:
             continue
         if "metadata.json" in fileList:
             metadataFilePath = os.path.join(os.getcwd(), dirName, "metadata.json")
             metadataObj = loadJsonObj(metadataFilePath)
 
-            receiptData = collectReceiptData(manifestData, metadataObj)
-            for data in receiptData:
-                collectedReceipts.append(data)
+            receipt_data = collectReceiptData(manifest_data, metadataObj)
+            for data in receipt_data:
+                collected_receipts.append(data)
         else:
             logging.info("no manifest file found in %s" % dirName)
 
-    receiptFilePath = os.path.join(options.metadataOutDir, options.receiptFile)
-    writeReceipt(collectedReceipts, receiptFilePath)
+    receipt_file = os.path.join(options.metadataOutDir, options.receiptFile)
+    writeReceipt(collected_receipts, receipt_file)
 
     # Sent the receipt to the submission server
     if not options.skip_submit:
-        with open(receiptFilePath) as f:
+        with open(receipt_file) as f:
             r = requests.put(options.submissionServerUrl
                              + "/v0/submissions/{}".format(submission_id),
                              json={"receipt": f.read()})
