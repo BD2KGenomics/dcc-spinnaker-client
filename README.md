@@ -21,7 +21,7 @@ Then edit the file to specify your Redwood access token.
 Create a `manifest.tsv` (or `manifest.xlsx`) like this example [spreadsheet](https://docs.google.com/spreadsheets/d/13fqil92C-Evi-4cy_GTnzNMmrD0ssuSCx3-cveZ4k70/edit?usp=sharing) or [tsv](manifests/three_manifest.tsv). See below for more details. Then run:
 
 ```
-docker run -it -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/dcc/data -v $(pwd)/outputs:/outputs quay.io/ucsc_cgl/core-client:1.0.1 spinnaker-upload /manifests/manifest.tsv
+docker run -it -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/data -v $(pwd)/manifest.tsv:/manifests/manifest.tsv -v $(pwd)/outputs:/outputs quay.io/ucsc_cgl/core-client:experimental spinnaker-upload /manifests/manifest.tsv
 ```
 
 Make sure 'File Path' correctly locates the data where it's mounted into the docker container.
@@ -37,13 +37,13 @@ This assumes the current working directory (`pwd`) has a manifest, like the ones
 
 NOTE: make sure you have enough space in `pwd`
 ```
-docker run -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/dcc/data -v $(pwd)/outputs quay.io/ucsc_cgl/core-client:1.0.1 redwood-download /dcc/data/manifest.tsv /dcc/data/
+docker run -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/data -v $(pwd)/outputs quay.io/ucsc_cgl/core-client:experimental redwood-download /data/manifest.tsv /data
 ```
 
 ### Download Data (by id)
 You can also download a single file by its unique id (not bundle id):
 ````
-docker run -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/dcc/data quay.io/ucsc_cgl/core-client:1.0.1 download <object-id> /dcc/data/
+docker run -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/data quay.io/ucsc_cgl/core-client:experimental download <object-id> /data
 ```
 
 ### Metadata Spreadsheet Column Details
