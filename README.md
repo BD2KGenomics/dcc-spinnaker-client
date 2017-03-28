@@ -10,7 +10,7 @@ You'll need [Docker](https://docs.docker.com/engine/installation/) and a Redwood
 ### Configuration
 All users need to do this in order to use the client.
 
-See the underlying [dcc-redwood-client docs](https://github.com/BD2KGenomics/dcc-redwood-client/tree/1.1.0#getting-started) for details on how to configure the client. In short:
+See the underlying [dcc-redwood-client docs](https://github.com/BD2KGenomics/dcc-redwood-client/tree/1.1.1#getting-started) for details on how to configure the client. In short:
 ```
 wget https://raw.githubusercontent.com/BD2KGenomics/dcc-redwood-client/develop/src/main/conf/application-redwood.properties
 ```
@@ -21,7 +21,7 @@ Then edit the file to specify your Redwood access token.
 Create a `manifest.tsv` (or `manifest.xlsx`) like this example [spreadsheet](https://docs.google.com/spreadsheets/d/13fqil92C-Evi-4cy_GTnzNMmrD0ssuSCx3-cveZ4k70/edit?usp=sharing) or [tsv](manifests/three_manifest.tsv). See below for more details. Then run:
 
 ```
-docker run -it -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/data -v $(pwd)/manifest.tsv:/manifests/manifest.tsv -v $(pwd)/outputs:/outputs quay.io/ucsc_cgl/core-client:experimental spinnaker-upload /manifests/manifest.tsv
+docker run -it -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/data -v $(pwd)/manifest.tsv:/manifests/manifest.tsv -v $(pwd)/outputs:/outputs quay.io/ucsc_cgl/core-client:1.1.0 spinnaker-upload /manifests/manifest.tsv
 ```
 
 Make sure 'File Path' correctly locates the data where it's mounted into the docker container.
@@ -37,13 +37,14 @@ This assumes the current working directory (`pwd`) has a manifest, like the ones
 
 NOTE: make sure you have enough space in `pwd`
 ```
-docker run -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/data -v $(pwd)/outputs quay.io/ucsc_cgl/core-client:experimental redwood-download /data/manifest.tsv /data
+docker run -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/data -v $(pwd)/outputs quay.io/ucsc_cgl/core-client:1.1.0 redwood-download /data/manifest.tsv /data
 ```
 
 ### Download Data (by id)
+
 You can also download a single file by its unique id (not bundle id):
-````
-docker run -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/data quay.io/ucsc_cgl/core-client:experimental download <object-id> /data
+```
+docker run -e REDWOOD_ENDPOINT=storage.ucsc-cgl.org -v $(pwd)/application-redwood.properties:/dcc/dcc-redwood-client/conf/application-redwood.properties -v $(pwd):/data quay.io/ucsc_cgl/core-client:1.1.0 download <object-id> /data
 ```
 
 ### Metadata Spreadsheet Column Details
@@ -62,20 +63,38 @@ The contents of your metadata spreadsheet will dictate how the analysis core han
 - Sample UUID
 - Analysis Type
 - Workflow Name
-- Workflow Version File Type
+- Workflow Version 
+- File Type
 - File Path
 - Upload File ID
 - Data Bundle ID
 - Metadata.json
 
-#### Data Types
-We support the following types.  First and foremost, the types below are just intended
-to be an overview. We need to standardize on actual acceptable terms. To do this
-we use the Codelists (controlled vocabularies) from the ICGC.  See http://docs.icgc.org/dictionary/viewer/#?viewMode=codelist
+To standardize our terminology to allow for automated processing we use the codelists (controlled vocabularies) from the ICGC.  
+See http://docs.icgc.org/dictionary/viewer/#?viewMode=codelist
 
-In the future we will validate metadata JSON against these codelists via the Spinnaker service.
+#### Program
+e.g. TEST
 
-#### Sample Types:
+#### Project
+e.g. _DEV_
+
+### Center Name
+e.g. Stanford
+
+#### Submitter Donor ID
+Unique donor identifier as tracked by submitter.
+
+#### Donor UUID
+Should be left blank for first-time uploads. Will be populated by `spinnaker-upload`
+
+#### Submitter Specimen ID
+Unique specimen identifier as tracked by submitter.
+
+#### Specimen UUID
+Should be left blank for first-time uploads.
+
+#### Submitter Specimen Type
 * dna normal
 * dna tumor
 * rna tumor
@@ -86,7 +105,7 @@ And there are others as well but these are the major ones we'll encounter for no
 The actual values should come from the ICGC Codelist above.  Specifically the
 `specimen.0.specimen_type.v3` codelist.
 
-#### Experimental Design Types
+#### Submitter Experimental Design
 * WXS
 * WGS
 * Gene Panel
@@ -95,12 +114,43 @@ The actual values should come from the ICGC Codelist above.  Specifically the
 The actual values should come from the ICGC Codelist above.  Specifically the
 `GLOBAL.0.sequencing_strategy.v1` codelist.
 
-#### File Types/Formats
+#### Submitter Sample ID
+Unique sample identifier. Must be unique from Donor IDs and Specimen IDs.
+
+#### Sample UUID
+Should be left blank for first-time uploads.
+
+#### Analysis Type
+e.g.
+* sequence_upload
+* alignment
+* germline_variant_calling
+* somatic_variant_calling
+
+#### Workflow Name
+Name of the workflow to be run
+
+#### Workflow Version
+Version of the workflow to be run
+
+#### File Type
 * sequence/fastq
 * sequence/unaligned BAM
 * alignment/BAM & BAI pair
 * expression/RSEM(?)
 * variants/VCF
+
+#### File Path
+A path that must point to the data where it's mounted in to the docker container.
+
+#### Upload File ID
+Should be left blank for first-time uploads.
+
+#### Data Bundle ID
+Should be left blank for first-time uploads.
+
+#### Metadata.json
+Should be left blank for first-time uploads.
 
 These will all come from the [EDAM Ontology](http://edamontology.org).  They have
 a mechanism to add terms as needed.

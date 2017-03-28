@@ -10,13 +10,4 @@ RUN pip install -r ${SPINNAKER_CLIENT_HOME}/requirements.txt
 
 ENV PATH ${SPINNAKER_CLIENT_HOME}/bin:${PATH}
 
-# hack to show icgc logs in output dir # TODO: fix
-RUN mkdir -p /outputs \
- && mkdir -p ${DCC_HOME:-/dcc}/icgc-storage-client/logs \
- && mkdir -p ${DCC_HOME:-/dcc}/dcc-metadata-client/logs \
- && touch ${DCC_HOME:-/dcc}/icgc-storage-client/logs/client.log \
- && touch ${DCC_HOME:-/dcc}/dcc-metadata-client/logs/dcc-metadata-client.log \
- && ln -s ${DCC_HOME:-/dcc}/icgc-storage-client/logs/client.log /outputs/icgc-storage-client.log \
- && ln -s ${DCC_HOME:-/dcc}/dcc-metadata-client/logs/dcc-metadata-client.log /outputs/dcc-metadata-client.log
-
 WORKDIR ${SPINNAKER_CLIENT_HOME}

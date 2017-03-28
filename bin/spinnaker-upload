@@ -1,3 +1,12 @@
 #!/usr/bin/env bash
 
 python /dcc/dcc-spinnaker-client/spinnaker.py "$@"
+
+# hack to show icgc logs in output dir (only works if /output is used)
+mkdir -p /outputs
+mkdir -p ${DCC_HOME:-/dcc}/icgc-storage-client/logs
+touch ${DCC_HOME:-/dcc}/icgc-storage-client/logs/client.log
+cp ${DCC_HOME:-/dcc}/icgc-storage-client/logs/client.log /outputs/icgc-storage-client.log
+mkdir -p ${DCC_HOME:-/dcc}/dcc-metadata-client/logs
+touch ${DCC_HOME:-/dcc}/dcc-metadata-client/logs/dcc-metadata-client.log
+cp ${DCC_HOME:-/dcc}/dcc-metadata-client/logs/dcc-metadata-client.log /outputs/dcc-metadata-client.log
