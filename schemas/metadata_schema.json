@@ -117,6 +117,9 @@
         "donor_uuid": {
             "$ref": "#/definitions/uuid"
         },
+        "submitter_donor_primary_site":{
+            "type": "string"
+        },
         "specimen": {
             "type": "array",
             "items": {

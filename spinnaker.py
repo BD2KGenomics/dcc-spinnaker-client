@@ -24,6 +24,8 @@ import semver
 
 # methods and functions
 
+getValueFromObject = lambda x,y: x[y] if y in x else "" #Returns a value from a dictionary x if present. Otherwise returns an empty string
+
 def getOptions():
     """
     parse options
@@ -219,7 +221,7 @@ def getDataObj(dict, schema):
 
     dataObj = {}
     for propName in propNames:
-        dataObj[propName] = dict[propName]
+        dataObj[propName] = getValueFromObject(dict, propName) # dict[propName]
 
     if "workflow_uuid" in dict.keys():
         dataObj["workflow_uuid"] = dict["workflow_uuid"]
@@ -318,7 +320,8 @@ def getWorkflowObjects(flatMetadataObjs):
             workflowObj["center_name"] = metaObj["center_name"]
             workflowObj["submitter_donor_id"] = metaObj["submitter_donor_id"]
             workflowObj["donor_uuid"] = metaObj["donor_uuid"]
-
+            #ADDING THE PRIMARY SITE; Since it is optional, if it isn't present, it will be empty
+            workflowObj["submitter_donor_primary_site"] = getValueFromObject(metaObj, "submitter_donor_primary_site")#metaObj["submitter_donor_primary_site"]
             workflowObj["timestamp"] = getNow().isoformat()
             workflowObj["schema_version"] = schema_version
 
@@ -574,6 +577,8 @@ def collectReceiptData(manifestData, metadataObj):
     commonData["center_name"] = metadataObj["center_name"]
     commonData["submitter_donor_id"] = metadataObj["submitter_donor_id"]
     commonData["donor_uuid"] = metadataObj["donor_uuid"]
+    #ADDING PRIMARY SITE
+    commonData["submitter_donor_primary_site"] = getValueFromObject(metadataObj, "submitter_donor_primary_site")#metadataObj["submitter_donor_primary_site"]
 
     commonData["submitter_specimen_id"] = metadataObj["specimen"][0]["submitter_specimen_id"]
     commonData["specimen_uuid"] = metadataObj["specimen"][0]["specimen_uuid"]
@@ -607,7 +612,7 @@ def writeReceipt(collectedReceipts, receiptFileName, d="\t"):
     write an upload receipt file
     '''
     with open(receiptFileName, 'w') as receiptFile:
-        fieldnames = ["program", "project", "center_name", "submitter_donor_id", "donor_uuid", "submitter_specimen_id", "specimen_uuid", "submitter_specimen_type", "submitter_experimental_design", "submitter_sample_id", "sample_uuid", "analysis_type", "workflow_name", "workflow_version", "file_type", "file_path", "file_uuid", "bundle_uuid", "metadata_uuid"]
+        fieldnames = ["program", "project", "center_name", "submitter_donor_id", "donor_uuid", "submitter_donor_primary_site", "submitter_specimen_id", "specimen_uuid", "submitter_specimen_type", "submitter_experimental_design", "submitter_sample_id", "sample_uuid", "analysis_type", "workflow_name", "workflow_version", "file_type", "file_path", "file_uuid", "bundle_uuid", "metadata_uuid"]
         writer = csv.DictWriter(receiptFile, fieldnames=fieldnames, delimiter=d)
 
         writer.writeheader()
