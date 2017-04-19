@@ -88,7 +88,9 @@
                     "pattern": "^Recurrent tumour -"
                 }, {
                     "pattern": "^Metastatic tumour -"
-                }
+                }, {
+		    "pattern": "^Cell line -"
+		}
             ]
         }
     },
@@ -115,6 +117,9 @@
         "donor_uuid": {
             "$ref": "#/definitions/uuid"
         },
+        "submitter_donor_primary_site":{
+            "type": "string"
+        },
         "specimen": {
             "type": "array",
             "items": {
@@ -130,6 +135,9 @@
                     "submitter_specimen_type": {
                         "$ref": "#/definitions/specimen_type"
                     },
+		    "submitter_experimental_design": {
+			"type": "string"
+		    },
                     "samples": {
                         "type": "array",
                         "items": {

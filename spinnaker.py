@@ -22,7 +22,11 @@ import copy
 import semver
 import requests
 import dateutil
+import hashlib
+import pdb
 
+
+getValueFromObject = lambda x,y: x[y] if y in x else "" #Returns a value from a dictionary x if present. Otherwise returns an empty string
 
 def getOptions():
     """
@@ -56,21 +60,15 @@ def getOptions():
                       default="schemas/metadata_schema.json", type="string",
                       dest="metadataSchemaFileName",
                       help="flattened json schema file for metadata")
+    parser.add_option("--registration-file", action="store", default="registration.tsv", type="string",
+                      dest="redwood_registration_file",
+                      help="file to write Redwood metadata upload registration manifest in. Existing file will be overwritten.")
     parser.add_option("-d", "--output-dir", action="store", default="/outputs", type="string",
                       dest="metadataOutDir",
                       help="output directory. Existing files will be overwritten.")
     parser.add_option("-r", "--receipt-file", action="store", default="receipt.tsv", type="string",
                       dest="receiptFile",
                       help="receipt file name. Includes UUID for all uploaded files")
-    parser.add_option("--storage-access-token", action="store", default="NA", type="string",
-                      dest="awsAccessToken",
-                      help="access token for AWS (12345678-abcd-1234-abcdefghijkl.)")
-    parser.add_option("--metadata-server-url", action="store",
-                      default="https://storage2.ucsc-cgl.org:8444",
-                      type="string", dest="metadataServerUrl", help="URL for metadata server.")
-    parser.add_option("--storage-server-url", action="store",
-                      default="https://storage2.ucsc-cgl.org:5431", type="string",
-                      dest="storageServerUrl", help="URL for storage server.")
     parser.add_option("--submission-server-url", action="store",
                       default="http://storage2.ucsc-cgl.org:8460", type="string",
                       dest="submissionServerUrl", help="URL for submission server.")
@@ -149,14 +147,9 @@ def readFileLines(filename, strip=True):
     """
     Convenience method for getting an array of fileLines from a file.
     """
-    fileLines = []
-    file = open(filename, 'r')
-    for line in file.readlines():
-        if strip:
-            line = line.rstrip("\r\n")
-        fileLines.append(line)
-    file.close()
-    return fileLines
+    with open(filename, 'r') as f:
+        lines = [l.strip("\r\n") if strip else l for l in f.readlines()]
+    return lines
 
 
 def readTsv(fileLines, d="\t"):
@@ -255,7 +248,7 @@ def getDataObj(dict, schema):
 
     dataObj = {}
     for propName in propNames:
-        dataObj[propName] = dict[propName]
+        dataObj[propName] = getValueFromObject(dict, propName) # dict[propName]
 
     if "workflow_uuid" in dict.keys():
         dataObj["workflow_uuid"] = dict["workflow_uuid"]
@@ -357,7 +350,8 @@ def getWorkflowObjects(flatMetadataObjs):
             workflowObj["center_name"] = metaObj["center_name"]
             workflowObj["submitter_donor_id"] = metaObj["submitter_donor_id"]
             workflowObj["donor_uuid"] = metaObj["donor_uuid"]
-
+            #ADDING THE PRIMARY SITE; Since it is optional, if it isn't present, it will be empty
+            workflowObj["submitter_donor_primary_site"] = getValueFromObject(metaObj, "submitter_donor_primary_site")#metaObj["submitter_donor_primary_site"]
             workflowObj["timestamp"] = getNow().isoformat()
             workflowObj["schema_version"] = schema_version
 
@@ -368,6 +362,7 @@ def getWorkflowObjects(flatMetadataObjs):
             workflowObj["specimen"].append(specObj)
             specObj["submitter_specimen_id"] = metaObj["submitter_specimen_id"]
             specObj["submitter_specimen_type"] = metaObj["submitter_specimen_type"]
+            specObj["submitter_experimental_design"] = metaObj["submitter_experimental_design"]
             specObj["specimen_uuid"] = metaObj["specimen_uuid"]
             specObj["samples"] = []
 
@@ -468,106 +463,38 @@ def setupLogging(logfileName, logFormat, logLevel, logToConsole=True):
     return None
 
 
-def registerBundleUpload(metadataUrl, bundleDir, accessToken):
-    """
-    java
-     -Djavax.net.ssl.trustStore=ssl/cacerts
-     -Djavax.net.ssl.trustStorePassword=changeit
-     -Dserver.baseUrl=https://storage2.ucsc-cgl.org:8444
-     -DaccessToken=${accessToken}
-     -jar dcc-metadata-client/lib/dcc-metadata-client.jar
-     -i ${upload}
-     -o ${manifest}
-     -m manifest.txt
-    """
+def add_to_registration(registration, bundle_id, project, file_path, controlled_access):
+    with open(file_path, 'r') as f:
+        hash = hashlib.md5()
+        hash.update(f.read())
+        access = 'controlled' if controlled_access else 'open'
+        registration.write('{}\t{}\t{}\t{}\t{}\n'.format(bundle_id, project, file_path, hash.hexdigest(), access))
+
+
+def register_upload(manifest, outdir):
     success = True
-
-    metadataClientJar = "dcc-metadata-client/lib/dcc-metadata-client.jar"
-    trustStore = "ssl/cacerts"
-    trustStorePw = "changeit"
-
-    # build command string
-    command = ["java"]
-    command.append("-Djavax.net.ssl.trustStore=" + trustStore)
-    command.append("-Djavax.net.ssl.trustStorePassword=" + trustStorePw)
-    command.append("-Dserver.baseUrl=" + str(metadataUrl))
-    command.append("-DaccessToken=" + str(accessToken))
-    command.append("-jar " + metadataClientJar)
-    command.append("-i " + str(bundleDir))
-    command.append("-o " + str(bundleDir))
-    command.append("-m manifest.txt")
-    command = " ".join(command)
-
-    # !!! This may expose the access token !!!
-    logging.debug("register upload command:\t%s" % (command))
-
+    command = "dcc-metadata-client -m {} -o {}".format(manifest, outdir)
+    logging.info("registering upload redwood metadata: {}".format(command))
     try:
-        logging.debug(command)
-        subprocess.check_output(command, cwd=os.getcwd(),
-                                stderr=subprocess.STDOUT, shell=True)
-    except Exception as exc:
+        subprocess.check_output(command, cwd=os.getcwd(), stderr=subprocess.STDOUT, shell=True, executable="/bin/bash")
+    except subprocess.CalledProcessError as exc:
         success = False
-        # !!! logging.exception here may expose access token !!!
-        logging.error("Error while registering bundle %s" % bundleDir)
-        writeJarExceptionsToLog(exc.output)
-    finally:
-        logging.info("Finished registering bundle upload %s" % bundleDir)
-
+        logging.error("error while registering upload with redwood-metadata-server")
+        writeJarExceptionsToLog(exc.output)        
     return success
 
 
-def performBundleUpload(metadataUrl, storageUrl, bundleDir, accessToken, force=False):
-    """
-    Java
-        -Djavax.net.ssl.trustStore=ssl/cacerts
-        -Djavax.net.ssl.trustStorePassword=changeit
-        -Dmetadata.url=https://storage2.ucsc-cgl.org:8444
-        -Dmetadata.ssl.enabled=true
-        -Dclient.ssl.custom=false
-        -Dstorage.url=https://storage2.ucsc-cgl.org:5431
-        -DaccessToken=${accessToken}
-        -jar icgc-storage-client/lib/icgc-storage-client.jar upload
-        --manifest ${manifest}/manifest.txt
-    """
+def perform_upload(manifest, force):
     success = True
-
-    storageClientJar = "icgc-storage-client/lib/icgc-storage-client.jar"
-    trustStore = "ssl/cacerts"
-    trustStorePw = "changeit"
-
-    # build command string
-    command = ["java"]
-    command.append("-Djavax.net.ssl.trustStore=" + trustStore)
-    command.append("-Djavax.net.ssl.trustStorePassword=" + trustStorePw)
-    command.append("-Dmetadata.url=" + str(metadataUrl))
-    command.append("-Dmetadata.ssl.enabled=true")
-    command.append("-Dclient.ssl.custom=false")
-    command.append("-Dstorage.url=" + str(storageUrl))
-    command.append("-DaccessToken=" + str(accessToken))
-    command.append("-jar " + storageClientJar + " upload")
-
-    # force upload in case object id already exists remotely
-    if force:
-        command.append("--force")
-
-    manifestFilePath = os.path.join(bundleDir, "manifest.txt")
-    command.append("--manifest " + manifestFilePath)
-    command = " ".join(command)
-
-    # !!! This may expose the access token !!!
-#     logging.debug("perform upload command:\t%s" % (command))
-
+    f = '--force' if force else ''
+    command = "icgc-storage-client upload --manifest {} {}".format(manifest, f)
+    logging.info("performing upload: {}".format(command))
     try:
-        subprocess.check_output(command, cwd=os.getcwd(),
-                                stderr=subprocess.STDOUT, shell=True)
+        subprocess.check_output(command, cwd=os.getcwd(), stderr=subprocess.STDOUT, shell=True)
     except subprocess.CalledProcessError as exc:
         success = False
-        # !!! logging.exception here may expose access token !!!
-        logging.error("Error while uploading files for bundle %s" % bundleDir)
+        logging.error("error while uploading files")
         writeJarExceptionsToLog(exc.output)
-    finally:
-        logging.info("done uploading bundle %s" % bundleDir)
-
     return success
 
 
@@ -583,29 +510,18 @@ def writeJarExceptionsToLog(errorOutput):
 
 
 def parseUploadManifestFile(manifestFilePath):
-    '''
+    """
     from the upload manifest file, get the file_uuid for each uploaded file
-    '''
-    bundle_uuid = None
+    """
     idMapping = {}
-
     fileLines = readFileLines(manifestFilePath)
     for line in fileLines:
-        if bundle_uuid is None:
-            # first line contains bundle_uuid
-            fields = line.split(" ")
-            bundle_uuid = fields[-1]
-        elif line.startswith("#"):
-            # skip comment lines
-            pass
-        else:
-            # lines are in the form "file_uuid=file_path"
-            fields = line.split("=", 1)
-            fileName = os.path.basename(fields[1])
-            idMapping[fileName] = fields[0]
-
-    obj = {"bundle_uuid": bundle_uuid, "idMapping": idMapping}
-    return obj
+        fields = line.split()
+        if fields[0] != "object-id":
+            file_name = os.path.basename(fields[1])
+            object_id = fields[0]
+            idMapping[file_name] = object_id
+    return idMapping
 
 
 def collectReceiptData(manifestData, metadataObj):
@@ -623,10 +539,13 @@ def collectReceiptData(manifestData, metadataObj):
     commonData["center_name"] = metadataObj["center_name"]
     commonData["submitter_donor_id"] = metadataObj["submitter_donor_id"]
     commonData["donor_uuid"] = metadataObj["donor_uuid"]
+    #ADDING PRIMARY SITE
+    commonData["submitter_donor_primary_site"] = getValueFromObject(metadataObj, "submitter_donor_primary_site")#metadataObj["submitter_donor_primary_site"]
 
     commonData["submitter_specimen_id"] = metadataObj["specimen"][0]["submitter_specimen_id"]
     commonData["specimen_uuid"] = metadataObj["specimen"][0]["specimen_uuid"]
     commonData["submitter_specimen_type"] = metadataObj["specimen"][0]["submitter_specimen_type"]
+    commonData["submitter_experimental_design"] = metadataObj["specimen"][0]["submitter_experimental_design"]
 
     commonData["submitter_sample_id"] = \
         metadataObj["specimen"][0]["samples"][0]["submitter_sample_id"]
@@ -640,7 +559,7 @@ def collectReceiptData(manifestData, metadataObj):
         metadataObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_version"]
     commonData["bundle_uuid"] = \
         metadataObj["specimen"][0]["samples"][0]["analysis"][0]["bundle_uuid"]
-    commonData["metadata_uuid"] = manifestData["idMapping"]["metadata.json"]
+    commonData["metadata_uuid"] = manifestData["metadata.json"]
 
     workflow_outputs = metadataObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_outputs"]
     for output in workflow_outputs:
@@ -649,7 +568,7 @@ def collectReceiptData(manifestData, metadataObj):
         data["file_path"] = output["file_path"]
 
         fileName = os.path.basename(output["file_path"])
-        data["file_uuid"] = manifestData["idMapping"][fileName]
+        data["file_uuid"] = manifestData[fileName]
 
         collectedData.append(data)
 
@@ -661,11 +580,7 @@ def writeReceipt(collectedReceipts, receiptFileName, d="\t"):
     write an upload receipt file
     '''
     with open(receiptFileName, 'w') as receiptFile:
-        fieldnames = ["program", "project", "center_name", "submitter_donor_id",
-                      "donor_uuid", "submitter_specimen_id", "specimen_uuid",
-                      "submitter_specimen_type", "submitter_sample_id", "sample_uuid",
-                      "analysis_type", "workflow_name", "workflow_version", "file_type",
-                      "file_path", "file_uuid", "bundle_uuid", "metadata_uuid"]
+        fieldnames = ["program", "project", "center_name", "submitter_donor_id", "donor_uuid", "submitter_donor_primary_site", "submitter_specimen_id", "specimen_uuid", "submitter_specimen_type", "submitter_experimental_design", "submitter_sample_id", "sample_uuid", "analysis_type", "workflow_name", "workflow_version", "file_type", "file_path", "file_uuid", "bundle_uuid", "metadata_uuid"]
         writer = csv.DictWriter(receiptFile, fieldnames=fieldnames, delimiter=d)
 
         writer.writeheader()
@@ -799,6 +714,7 @@ def mergeDonors(metadataObjs):
 def main():
     startTime = getNow()
     (options, args, parser) = getOptions()
+    redwood_upload_manifest_dir = "redwoodUploadManifest"
 
     if len(args) == 0:
         logging.error("no input files")
@@ -816,7 +732,6 @@ def main():
 
     # !!! careful not to expose the access token !!!
     printOptions = copy.deepcopy(vars(options))
-    printOptions.pop("awsAccessToken")
     logging.debug('options:\t%s' % (str(printOptions)))
     logging.debug('args:\t%s' % (str(args)))
 
@@ -889,9 +804,6 @@ def main():
     # UPLOAD SECTION
     counts = {}
     counts["bundlesFound"] = 0
-    counts["failedRegistration"] = []
-    counts["failedUploads"] = []
-    counts["bundlesUploaded"] = 0
 
     if not options.skip_submit:
         r = requests.post(options.submissionServerUrl + "/v0/submissions", json={})
@@ -899,78 +811,79 @@ def main():
         logging.info("You can monitor the upload at {}/v0/submissions/{}".format(
             options.submissionServerUrl, submission_id))
 
-    # first pass uploads data bundles
+    # build redwood registration manifest
+    redwood_registration_manifest = os.path.join(options.metadataOutDir, options.redwood_registration_file)
+    redwood_upload_manifest = None
+    with open (redwood_registration_manifest, 'w') as registration:
+        registration.write('gnos_id\tprogram_code\tfile_path\tfile_md5\taccess\n')
+        for dir_name, subdirs, files in os.walk(options.metadataOutDir):
+            if dir_name == options.metadataOutDir:
+                continue
+            if len(subdirs) != 0:
+                continue
+            if "metadata.json" in files:
+                bundleDirFullPath = os.path.join(os.getcwd(), dir_name)
+                logging.debug("found bundle directory at %s" % (bundleDirFullPath))
+                counts["bundlesFound"] += 1
+
+                bundle_metadata = loadJsonObj(os.path.join(bundleDirFullPath, "metadata.json"))
+
+                project = bundle_metadata["project"]
+                bundle_uuid = os.path.basename(dir_name)
+                controlled_access = True
+                if redwood_upload_manifest is None:
+                    redwood_upload_manifest = os.path.join(options.metadataOutDir, redwood_upload_manifest_dir, bundle_uuid)
+
+                # register upload
+                for f in files:
+                    file = os.path.join(dir_name, f)
+                    add_to_registration(registration, bundle_uuid, project, file, controlled_access)
+            else:
+                logging.info("no metadata file found in %s" % dir_name)
+
+            logging.info("counts\t%s" % (json.dumps(counts)))
+
+    # submit registration to metadata-server and perform upload
+    mkdir_p(os.path.dirname(redwood_upload_manifest))
+    reg_success = register_upload(redwood_registration_manifest, os.path.dirname(redwood_upload_manifest))
+    if reg_success:
+        if not perform_upload(redwood_upload_manifest, options.force_upload):
+            logging.error("redwood upload failed")
+            sys.exit(1)
+
+    else:
+        logging.error("upload registration failed")
+        sys.exit(1)
+        
+    # generate receipt.tsv
+    logging.info("now generate upload receipt")
+    collected_receipts = []
+    manifest_data = parseUploadManifestFile(redwood_upload_manifest)
     for dirName, subdirList, fileList in os.walk(options.metadataOutDir):
-        if dirName == options.metadataOutDir:
-            continue
-        if len(subdirList) != 0:
+        if dirName == options.metadataOutDir \
+                or os.path.basename(dirName) == redwood_upload_manifest_dir or len(subdirList) != 0:
             continue
         if "metadata.json" in fileList:
-            bundleDirFullPath = os.path.join(os.getcwd(), dirName)
-            logging.debug("found bundle directory at %s" % (bundleDirFullPath))
-            counts["bundlesFound"] += 1
-
-            bundle_uuid = dirName
-
-            # register upload
-            args = {"accessToken": options.awsAccessToken, "bundleDir": dirName,
-                    "metadataUrl": options.metadataServerUrl}
-            regSuccess = registerBundleUpload(**args)
-
-            # perform upload
-            upSuccess = False
-            if regSuccess:
-                args["storageUrl"] = options.storageServerUrl
-                args["force"] = options.force_upload
-                upSuccess = performBundleUpload(**args)
-            else:
-                counts["failedRegistration"].append(bundle_uuid)
-
-            if upSuccess:
-                counts["bundlesUploaded"] += 1
-            else:
-                counts["failedUploads"].append(bundle_uuid)
-        else:
-            logging.info("no metadata file found in %s" % dirName)
-
-    logging.info("counts\t%s" % (json.dumps(counts)))
-
-    # second pass generates receipt.tsv
-    logging.info("now generate upload receipt")
-    collectedReceipts = []
-    for dirName, subdirList, fileList in os.walk(options.metadataOutDir):
-        if dirName == options.metadataOutDir:
-            continue
-        if len(subdirList) != 0:
-            continue
-        if "manifest.txt" in fileList:
-            manifestFilePath = os.path.join(os.getcwd(), dirName, "manifest.txt")
-            manifestData = parseUploadManifestFile(manifestFilePath)
-
             metadataFilePath = os.path.join(os.getcwd(), dirName, "metadata.json")
             metadataObj = loadJsonObj(metadataFilePath)
 
-            receiptData = collectReceiptData(manifestData, metadataObj)
-            for data in receiptData:
-                collectedReceipts.append(data)
+            receipt_data = collectReceiptData(manifest_data, metadataObj)
+            for data in receipt_data:
+                collected_receipts.append(data)
         else:
             logging.info("no manifest file found in %s" % dirName)
 
-    receiptFilePath = os.path.join(options.metadataOutDir, options.receiptFile)
-    writeReceipt(collectedReceipts, receiptFilePath)
+    receipt_file = os.path.join(options.metadataOutDir, options.receiptFile)
+    writeReceipt(collected_receipts, receipt_file)
 
     # Sent the receipt to the submission server
     if not options.skip_submit:
-        with open(receiptFilePath) as f:
+        with open(receipt_file) as f:
             r = requests.put(options.submissionServerUrl
                              + "/v0/submissions/{}".format(submission_id),
                              json={"receipt": f.read()})
             logging.info("You can view the receipt at {}/v0/submissions/{}".format(
                 options.submissionServerUrl, submission_id))
-
-    # final console output
-    if len(counts["failedRegistration"]) > 0 or len(counts["failedUploads"]) > 0:
-        logging.error("Upload failed")
 
     logging.info("Upload succeeded. A detailed log is at: %s" % (logFilePath))
     runTime = getTimeDelta(startTime).total_seconds()

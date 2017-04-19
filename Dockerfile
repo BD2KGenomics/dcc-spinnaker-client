@@ -1,12 +1,13 @@
-FROM anapsix/alpine-java
+FROM quay.io/ucsc_cgl/redwood-client:1.1.1
 
-RUN apk add --no-cache --update python py-pip
+RUN apt-get update && apt-get install -y  python python-pip
 RUN pip install --upgrade pip
 
-WORKDIR /app
-ADD ./requirements.txt /app/requirements.txt
-RUN pip install -r /app/requirements.txt
+ENV SPINNAKER_CLIENT_HOME /dcc/dcc-spinnaker-client
 
-ADD . /app
+ADD . ${SPINNAKER_CLIENT_HOME}
+RUN pip install -r ${SPINNAKER_CLIENT_HOME}/requirements.txt
 
-ENTRYPOINT ["python", "spinnaker.py"]
+ENV PATH ${SPINNAKER_CLIENT_HOME}/bin:${PATH}
+
+WORKDIR ${SPINNAKER_CLIENT_HOME}
