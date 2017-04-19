@@ -6,7 +6,7 @@ upload: clean
 		-v `pwd`/manifests:/manifests \
 		-v `pwd`/samples:/samples \
 		-v `pwd`/outputs:/outputs \
-		--net redwood_default \
+		--net redwood_internal \
 		--link redwood-nginx:metadata.redwood.io \
 		--link redwood-nginx:storage.redwood.io \
 		-e ACCESS_TOKEN=$(REDWOOD_ACCESS_TOKEN) \
@@ -20,7 +20,7 @@ skip_submit: clean
 		-v `pwd`/manifests:/manifests \
 		-v `pwd`/samples:/samples \
 		-v `pwd`/outputs:/outputs \
-		--net redwood_default \
+		--net redwood_internal \
 		--link redwood-nginx:metadata.redwood.io \
 		--link redwood-nginx:storage.redwood.io \
 		-e ACCESS_TOKEN=$(REDWOOD_ACCESS_TOKEN) \
@@ -34,7 +34,7 @@ debug: clean
 		-v `pwd`/manifests:/manifests \
 		-v `pwd`/samples:/samples \
 		-v `pwd`/outputs:/outputs \
-		--net redwood_default \
+		--net redwood_internal \
 		--link redwood-nginx:metadata.redwood.io \
 		--link redwood-nginx:storage.redwood.io \
 		-e ACCESS_TOKEN=$(REDWOOD_ACCESS_TOKEN) \
