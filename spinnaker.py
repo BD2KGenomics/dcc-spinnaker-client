@@ -1,7 +1,8 @@
 """
 upload.py
 
-Generate and upload UCSC Core Genomics data bundles from information passed via excel or tsv file.
+Generate and upload UCSC Core Genomics data bundles from information passed via
+excel or tsv file.
 
 See "helper client" in:
 https://ucsc-cgl.atlassian.net/wiki/display/DEV/Storage+Service+-+Functional+Spec
@@ -23,10 +24,15 @@ import semver
 import requests
 import dateutil
 import hashlib
-import pdb
 
 
-getValueFromObject = lambda x,y: x[y] if y in x else "" #Returns a value from a dictionary x if present. Otherwise returns an empty string
+def getValueFromObject(x, y):
+    """
+    Returns a value from a dictionary x if present. Otherwise returns an empty
+    string
+    """
+    return x[y] if y in x else ""
+
 
 def getOptions():
     """
@@ -34,7 +40,8 @@ def getOptions():
     """
     usage_text = []
     usage_text.append("%prog [options] [input Excel or tsv files]")
-    usage_text.append("Data will be read from 'Sheet1' in the case of Excel file.")
+    usage_text.append("Data will be read from 'Sheet1' in the case of Excel "
+                      "file.")
 
     description_text = []
     description_text.append("Upload client for UCSC DCC")
@@ -43,15 +50,18 @@ def getOptions():
     description_text.append("2 Validates the metadata generates")
     description_text.append("3 Registers the data bundles with the server")
     description_text.append("4 Uploads the files")
-    description_text.append("5 Returns receipt with UUIDs for all uploaded files")
+    description_text.append("5 Returns receipt with UUIDs for all uploaded"
+                            "files")
 
-    parser = OptionParser(usage="\n".join(usage_text), description="\n".join(description_text))
-    parser.add_option("-v", "--verbose", action="store_true", default=False, dest="verbose",
-                      help="Switch for verbose mode.")
-    parser.add_option("-s", "--skip-upload", action="store_true", default=False, dest="skip_upload",
-                      help="Switch to skip upload. Metadata files will be generated only.")
-    parser.add_option("-t", "--test", action="store_true", default=False, dest="test",
-                      help="Switch for development testing.")
+    parser = OptionParser(usage="\n".join(usage_text), description="\n"
+                          .join(description_text))
+    parser.add_option("-v", "--verbose", action="store_true", default=False,
+                      dest="verbose", help="Switch for verbose mode.")
+    parser.add_option("-s", "--skip-upload", action="store_true",
+                      default=False, dest="skip_upload", help="Switch to skip "
+                      "upload. Metadata files will be generated only.")
+    parser.add_option("-t", "--test", action="store_true", default=False,
+                      dest="test", help="Switch for development testing.")
     parser.add_option("-i", "--input-metadata-schema", action="store",
                       default="schemas/input_metadata.json", type="string",
                       dest="inputMetadataSchemaFileName",
@@ -60,21 +70,28 @@ def getOptions():
                       default="schemas/metadata_schema.json", type="string",
                       dest="metadataSchemaFileName",
                       help="flattened json schema file for metadata")
-    parser.add_option("--registration-file", action="store", default="registration.tsv", type="string",
-                      dest="redwood_registration_file",
-                      help="file to write Redwood metadata upload registration manifest in. Existing file will be overwritten.")
-    parser.add_option("-d", "--output-dir", action="store", default="/outputs", type="string",
+    parser.add_option("--registration-file", action="store",
+                      default="registration.tsv", type="string",
+                      dest="redwood_registration_file", help="file to write "
+                      "Redwood metadata upload registration manifest in. "
+                      "Existing file will be overwritten.")
+    parser.add_option("-d", "--output-dir", action="store", default="/outputs",
+                      type="string",
                       dest="metadataOutDir",
-                      help="output directory. Existing files will be overwritten.")
-    parser.add_option("-r", "--receipt-file", action="store", default="receipt.tsv", type="string",
-                      dest="receiptFile",
-                      help="receipt file name. Includes UUID for all uploaded files")
+                      help="output directory. Existing files will be "
+                      "overwritten.")
+    parser.add_option("-r", "--receipt-file", action="store",
+                      default="receipt.tsv", type="string", dest="receiptFile",
+                      help="receipt file name. Includes UUID for all uploaded "
+                      "files")
     parser.add_option("--submission-server-url", action="store",
-                      default="http://storage2.ucsc-cgl.org:8460", type="string",
-                      dest="submissionServerUrl", help="URL for submission server.")
+                      default="http://storage2.ucsc-cgl.org:8460",
+                      type="string", dest="submissionServerUrl",
+                      help="URL for submission server.")
     parser.add_option("--force-upload", action="store_true", default=False,
                       dest="force_upload",
-                      help="Force upload if object exists remotely. Overwrites existing bundle.")
+                      help="Force upload if object exists remotely. Overwrites"
+                      " existing bundle.")
     parser.add_option("--skip-submit", action="store_true", default=False,
                       dest="skip_submit",
                       help="Skip contacting the submission server.")
@@ -186,11 +203,12 @@ def processFieldNames(dictReaderObj):
 
 def generateUuid5(nameComponents, namespace=uuid.NAMESPACE_URL):
     """
-    generate a uuid5 where the name is the lower case of concatenation of nameComponents
+    generate a uuid5 where the name is the lower case of concatenation
+    of nameComponents
     """
     strings = []
     for nameComponent in nameComponents:
-        # was having some trouble with data coming out of openpyxl not being ascii
+        # was having trouble with openpyxl data not being ascii
         strings.append(nameComponent.encode('ascii', 'ignore'))
     name = "".join(strings).lower()
     id = str(uuid.uuid5(namespace, name))
@@ -199,7 +217,8 @@ def generateUuid5(nameComponents, namespace=uuid.NAMESPACE_URL):
 
 def setUuids(dataObj):
     """
-    Set donor_uuid, specimen_uuid, and sample_uuid for dataObj. Uses uuid.uuid5().
+    Set donor_uuid, specimen_uuid, and sample_uuid for dataObj.
+    Uses uuid.uuid5().
     """
     keyFieldsMapping = {}
     keyFieldsMapping["donor_uuid"] = ["center_name", "submitter_donor_id"]
@@ -210,7 +229,8 @@ def setUuids(dataObj):
     keyFieldsMapping["sample_uuid"] = list(keyFieldsMapping["specimen_uuid"])
     keyFieldsMapping["sample_uuid"].append("submitter_sample_id")
 
-#     keyFieldsMapping["workflow_uuid"] = ["sample_uuid", "workflow_name", "workflow_version"]
+#     keyFieldsMapping["workflow_uuid"] = ["sample_uuid", "workflow_name",
+# "workflow_version"]
 
     for uuidName in keyFieldsMapping.keys():
         keyList = []
@@ -238,8 +258,8 @@ def setUuids(dataObj):
 
 def getDataObj(dict, schema):
     """
-    Pull data out from dict. Use the flattened schema to get the key names as well as validate.
-    If validation fails, return None.
+    Pull data out from dict. Use the flattened schema to get the key names
+    as well as validate. If validation fails, return None.
     """
     setUuids(dict)
 
@@ -248,7 +268,8 @@ def getDataObj(dict, schema):
 
     dataObj = {}
     for propName in propNames:
-        dataObj[propName] = getValueFromObject(dict, propName) # dict[propName]
+        dataObj[propName] = getValueFromObject(dict, propName)
+        # dict[propName]
 
     if "workflow_uuid" in dict.keys():
         dataObj["workflow_uuid"] = dict["workflow_uuid"]
@@ -306,11 +327,14 @@ def ln_s(file_path, link_path):
     except OSError as exc:
         if exc.errno == errno.EEXIST:
             if os.path.isdir(link_path):
-                logging.error("Linking failed -> %s is an existing directory" % (link_path))
+                logging.error("Linking failed -> %s is an existing directory"
+                              % (link_path))
             elif os.path.isfile(link_path):
-                logging.error("Linking failed -> %s is an existing file" % (link_path))
+                logging.error("Linking failed -> %s is an existing file"
+                              % (link_path))
             elif os.path.islink(link_path):
-                logging.error("Linking failed -> %s is an existing link" % (link_path))
+                logging.error("Linking failed -> %s is an existing link"
+                              % (link_path))
         else:
             logging.error("Raising error")
             raise
@@ -333,7 +357,8 @@ def mkdir_p(path):
 
 def getWorkflowObjects(flatMetadataObjs):
     """
-    For each flattened metadata object, build up a metadataObj with correct structure.
+    For each flattened metadata object, build up a metadataObj with
+    correct structure.
     """
     schema_version = "0.0.3"
 
@@ -350,8 +375,12 @@ def getWorkflowObjects(flatMetadataObjs):
             workflowObj["center_name"] = metaObj["center_name"]
             workflowObj["submitter_donor_id"] = metaObj["submitter_donor_id"]
             workflowObj["donor_uuid"] = metaObj["donor_uuid"]
-            #ADDING THE PRIMARY SITE; Since it is optional, if it isn't present, it will be empty
-            workflowObj["submitter_donor_primary_site"] = getValueFromObject(metaObj, "submitter_donor_primary_site")#metaObj["submitter_donor_primary_site"]
+            # ADDING THE PRIMARY SITE; Since it is optional, if it isn't
+            # present, it will be empty
+            workflowObj["submitter_donor_primary_site"] = getValueFromObject(
+                metaObj, "submitter_donor_primary_site"
+            )
+            # ^ metaObj["submitter_donor_primary_site"]
             workflowObj["timestamp"] = getNow().isoformat()
             workflowObj["schema_version"] = schema_version
 
@@ -361,8 +390,12 @@ def getWorkflowObjects(flatMetadataObjs):
             specObj = {}
             workflowObj["specimen"].append(specObj)
             specObj["submitter_specimen_id"] = metaObj["submitter_specimen_id"]
-            specObj["submitter_specimen_type"] = metaObj["submitter_specimen_type"]
-            specObj["submitter_experimental_design"] = metaObj["submitter_experimental_design"]
+            specObj["submitter_specimen_type"] = metaObj[
+                "submitter_specimen_type"
+            ]
+            specObj["submitter_experimental_design"] = metaObj[
+                "submitter_experimental_design"
+            ]
             specObj["specimen_uuid"] = metaObj["specimen_uuid"]
             specObj["samples"] = []
 
@@ -385,7 +418,8 @@ def getWorkflowObjects(flatMetadataObjs):
         # retrieve workflow
         workflowObj = commonObjMap[workflow_uuid]
         # analysis_type = metaObj["analysis_type"]
-        wf_outputsObj = workflowObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_outputs"]
+        wf_outputsObj = workflowObj["specimen"][0]["samples"][0][
+            "analysis"][0]["workflow_outputs"]
 
         # add file info
         fileInfoObj = {}
@@ -398,7 +432,8 @@ def getWorkflowObjects(flatMetadataObjs):
 
 def writeJson(directory, fileName, jsonObj):
     """
-    Dump a json object to the specified directory/fileName. Creates directory if necessary.
+    Dump a json object to the specified directory/fileName. Creates directory
+    if necessary.
     NOTE: will clobber the existing file
     """
     success = None
@@ -406,7 +441,8 @@ def writeJson(directory, fileName, jsonObj):
         mkdir_p(directory)
         filePath = os.path.join(directory, fileName)
         file = open(filePath, 'w')
-        json.dump(jsonObj, file, indent=4, separators=(',', ': '), sort_keys=True)
+        json.dump(jsonObj, file, indent=4, separators=(',', ': '),
+                  sort_keys=True)
         success = 1
     except:
         logging.error("Error writing %s/%s" % (directory, fileName))
@@ -419,7 +455,8 @@ def writeJson(directory, fileName, jsonObj):
 def writeDataBundleDirs(structuredMetaDataObjMap, outputDir):
     """
     For each structuredMetaDataObj, prepare a data bundle dir for the workflow.
-    Assumes one data bundle per structuredMetaDataObj. That means 1 specimen, 1 sample, 1 analysis.
+    Assumes one data bundle per structuredMetaDataObj. That means 1 specimen,
+    1 sample, 1 analysis.
     """
     numFilesWritten = 0
     for workflow_uuid in structuredMetaDataObjMap.keys():
@@ -429,7 +466,8 @@ def writeDataBundleDirs(structuredMetaDataObjMap, outputDir):
         bundlePath = os.path.join(outputDir, workflow_uuid)
 
         # link data file(s)
-        workflow_outputs = metaObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_outputs"]
+        workflow_outputs = metaObj["specimen"][0]["samples"][0][
+            "analysis"][0]["workflow_outputs"]
         for outputObj in workflow_outputs:
             file_path = outputObj["file_path"]
             # so I'm editing the file path here since directory
@@ -452,8 +490,10 @@ def setupLogging(logfileName, logFormat, logLevel, logToConsole=True):
     """
     Setup simultaneous logging to file and console.
     """
-#     logFormat = "%(asctime)s %(levelname)s %(funcName)s:%(lineno)d %(message)s"
-    logging.basicConfig(filename=logfileName, level=logging.NOTSET, format=logFormat)
+    # logFormat = "%(asctime)s %(levelname)s %(funcName)s:%(lineno)d
+    # %(message)s"
+    logging.basicConfig(filename=logfileName, level=logging.NOTSET,
+                        format=logFormat)
     if logToConsole:
         console = logging.StreamHandler()
         console.setLevel(logLevel)
@@ -463,12 +503,14 @@ def setupLogging(logfileName, logFormat, logLevel, logToConsole=True):
     return None
 
 
-def add_to_registration(registration, bundle_id, project, file_path, controlled_access):
+def add_to_registration(registration, bundle_id, project, file_path,
+                        controlled_access):
     with open(file_path, 'r') as f:
         hash = hashlib.md5()
         hash.update(f.read())
         access = 'controlled' if controlled_access else 'open'
-        registration.write('{}\t{}\t{}\t{}\t{}\n'.format(bundle_id, project, file_path, hash.hexdigest(), access))
+        registration.write('{}\t{}\t{}\t{}\t{}\n'.format(
+            bundle_id, project, file_path, hash.hexdigest(), access))
 
 
 def register_upload(manifest, outdir):
@@ -476,11 +518,13 @@ def register_upload(manifest, outdir):
     command = "dcc-metadata-client -m {} -o {}".format(manifest, outdir)
     logging.info("registering upload redwood metadata: {}".format(command))
     try:
-        subprocess.check_output(command, cwd=os.getcwd(), stderr=subprocess.STDOUT, shell=True, executable="/bin/bash")
+        subprocess.check_output(command, cwd=os.getcwd(),
+                                stderr=subprocess.STDOUT, shell=True,
+                                executable="/bin/bash")
     except subprocess.CalledProcessError as exc:
         success = False
-        logging.error("error while registering upload with redwood-metadata-server")
-        writeJarExceptionsToLog(exc.output)        
+        logging.error("error registering upload with redwood-metadata-server")
+        writeJarExceptionsToLog(exc.output)
     return success
 
 
@@ -490,7 +534,8 @@ def perform_upload(manifest, force):
     command = "icgc-storage-client upload --manifest {} {}".format(manifest, f)
     logging.info("performing upload: {}".format(command))
     try:
-        subprocess.check_output(command, cwd=os.getcwd(), stderr=subprocess.STDOUT, shell=True)
+        subprocess.check_output(command, cwd=os.getcwd(),
+                                stderr=subprocess.STDOUT, shell=True)
     except subprocess.CalledProcessError as exc:
         success = False
         logging.error("error while uploading files")
@@ -526,9 +571,10 @@ def parseUploadManifestFile(manifestFilePath):
 
 def collectReceiptData(manifestData, metadataObj):
     """
-    collect the data for the upload receipt file The required fields are: program project
-    center_name submitter_donor_id donor_uuid submitter_specimen_id specimen_uuid
-    submitter_specimen_type submitter_sample_id sample_uuid analysis_type workflow_name
+    collect the data for the upload receipt file The required fields are:
+    program project center_name submitter_donor_id donor_uuid
+    submitter_specimen_id specimen_uuid submitter_specimen_type
+    submitter_sample_id sample_uuid analysis_type workflow_name
     workflow_version file_type file_path file_uuid bundle_uuid metadata_uuid
     """
     collectedData = []
@@ -539,29 +585,36 @@ def collectReceiptData(manifestData, metadataObj):
     commonData["center_name"] = metadataObj["center_name"]
     commonData["submitter_donor_id"] = metadataObj["submitter_donor_id"]
     commonData["donor_uuid"] = metadataObj["donor_uuid"]
-    #ADDING PRIMARY SITE
-    commonData["submitter_donor_primary_site"] = getValueFromObject(metadataObj, "submitter_donor_primary_site")#metadataObj["submitter_donor_primary_site"]
+    # ADDING PRIMARY SITE
+    commonData["submitter_donor_primary_site"] = getValueFromObject(
+        metadataObj, "submitter_donor_primary_site")
+    # ^ metadataObj["submitter_donor_primary_site"]
 
-    commonData["submitter_specimen_id"] = metadataObj["specimen"][0]["submitter_specimen_id"]
+    commonData["submitter_specimen_id"] = \
+        metadataObj["specimen"][0]["submitter_specimen_id"]
     commonData["specimen_uuid"] = metadataObj["specimen"][0]["specimen_uuid"]
-    commonData["submitter_specimen_type"] = metadataObj["specimen"][0]["submitter_specimen_type"]
-    commonData["submitter_experimental_design"] = metadataObj["specimen"][0]["submitter_experimental_design"]
+    commonData["submitter_specimen_type"] = \
+        metadataObj["specimen"][0]["submitter_specimen_type"]
+    commonData["submitter_experimental_design"] = \
+        metadataObj["specimen"][0]["submitter_experimental_design"]
 
     commonData["submitter_sample_id"] = \
         metadataObj["specimen"][0]["samples"][0]["submitter_sample_id"]
-    commonData["sample_uuid"] = metadataObj["specimen"][0]["samples"][0]["sample_uuid"]
+    commonData["sample_uuid"] = \
+        metadataObj["specimen"][0]["samples"][0]["sample_uuid"]
 
-    commonData["analysis_type"] = \
-        metadataObj["specimen"][0]["samples"][0]["analysis"][0]["analysis_type"]
-    commonData["workflow_name"] = \
-        metadataObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_name"]
-    commonData["workflow_version"] = \
-        metadataObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_version"]
+    commonData["analysis_type"] = metadataObj["specimen"][0][
+        "samples"][0]["analysis"][0]["analysis_type"]
+    commonData["workflow_name"] = metadataObj["specimen"][0][
+        "samples"][0]["analysis"][0]["workflow_name"]
+    commonData["workflow_version"] = metadataObj["specimen"][0][
+        "samples"][0]["analysis"][0]["workflow_version"]
     commonData["bundle_uuid"] = \
         metadataObj["specimen"][0]["samples"][0]["analysis"][0]["bundle_uuid"]
     commonData["metadata_uuid"] = manifestData["metadata.json"]
 
-    workflow_outputs = metadataObj["specimen"][0]["samples"][0]["analysis"][0]["workflow_outputs"]
+    workflow_outputs = metadataObj["specimen"][0][
+        "samples"][0]["analysis"][0]["workflow_outputs"]
     for output in workflow_outputs:
         data = copy.deepcopy(commonData)
         data["file_type"] = output["file_type"]
@@ -580,8 +633,16 @@ def writeReceipt(collectedReceipts, receiptFileName, d="\t"):
     write an upload receipt file
     '''
     with open(receiptFileName, 'w') as receiptFile:
-        fieldnames = ["program", "project", "center_name", "submitter_donor_id", "donor_uuid", "submitter_donor_primary_site", "submitter_specimen_id", "specimen_uuid", "submitter_specimen_type", "submitter_experimental_design", "submitter_sample_id", "sample_uuid", "analysis_type", "workflow_name", "workflow_version", "file_type", "file_path", "file_uuid", "bundle_uuid", "metadata_uuid"]
-        writer = csv.DictWriter(receiptFile, fieldnames=fieldnames, delimiter=d)
+        fieldnames = [
+            "program", "project", "center_name", "submitter_donor_id",
+            "donor_uuid", "submitter_donor_primary_site",
+            "submitter_specimen_id", "specimen_uuid",
+            "submitter_specimen_type", "submitter_experimental_design",
+            "submitter_sample_id", "sample_uuid", "analysis_type",
+            "workflow_name", "workflow_version", "file_type", "file_path",
+            "file_uuid", "bundle_uuid", "metadata_uuid"]
+        writer = csv.DictWriter(receiptFile, fieldnames=fieldnames,
+                                delimiter=d)
 
         writer.writeheader()
         writer.writerows(collectedReceipts)
@@ -670,7 +731,8 @@ def mergeDonors(metadataObjs):
 
                         # timestamp mapping
                         if "timestamp" in bundle:
-                            uuid_to_timestamp[donor_uuid].append(bundle["timestamp"])
+                            uuid_to_timestamp[donor_uuid].append(
+                                bundle["timestamp"])
                         continue
                     else:
                         # compare 2 analysis to keep only most relevant one
@@ -681,26 +743,34 @@ def mergeDonors(metadataObjs):
                         saved_version = analysisObj["workflow_version"]
                         # current is older than new
 
-                        if semver.compare(saved_version, new_workflow_version) == -1:
+                        if semver.compare(saved_version,
+                                          new_workflow_version) == -1:
                             sampleObj["analysis"].remove(analysisObj)
                             sampleObj["analysis"].append(bundle)
                             # timestamp mapping
                             if "timestamp" in bundle:
-                                uuid_to_timestamp[donor_uuid].append(bundle["timestamp"])
+                                uuid_to_timestamp[donor_uuid].append(
+                                    bundle["timestamp"])
 
-                        if semver.compare(saved_version, new_workflow_version) == 0:
-                            # use the timestamp to determine which analysis to choose
-                            if "timestamp" in bundle and "timestamp" in analysisObj:
-                                saved_timestamp = dateutil.parser.parse(analysisObj["timestamp"])
-                                new_timestamp = dateutil.parser.parse(bundle["timestamp"])
-                                timestamp_diff = saved_timestamp - new_timestamp
+                        if semver.compare(saved_version,
+                                          new_workflow_version) == 0:
+                            # use the timestamp to choose analysis to
+                            if "timestamp" in bundle and \
+                               "timestamp" in analysisObj:
+                                saved_timestamp = dateutil.parser.parse(
+                                    analysisObj["timestamp"])
+                                new_timestamp = dateutil.parser.parse(
+                                    bundle["timestamp"])
+                                timestamp_diff = \
+                                    saved_timestamp - new_timestamp
 
                                 if timestamp_diff.total_seconds() < 0:
                                     sampleObj["analysis"].remove(analysisObj)
                                     sampleObj["analysis"].append(bundle)
                                     # timestamp mapping
                                     if "timestamp" in bundle:
-                                        uuid_to_timestamp[donor_uuid].append(bundle["timestamp"])
+                                        uuid_to_timestamp[donor_uuid].append(
+                                            bundle["timestamp"])
 
     # Get the  most recent timstamp from uuid_to_timestamp(for each donor) and
     # use donorMapping to substitute it
@@ -766,11 +836,12 @@ def main():
 
     if options.test:
         # donorObjMapping = mergeDonors(structuredWorkflowObjMap.values())
-        validationResults = validateMetadataObjs(structuredWorkflowObjMap.values(),
-                                                 options.metadataSchemaFileName)
+        validationResults = validateMetadataObjs(
+            structuredWorkflowObjMap.values(), options.metadataSchemaFileName)
         numInvalidResults = len(validationResults["invalid"])
         if numInvalidResults != 0:
-            logging.error("%s invalid merged objects found:" % (numInvalidResults))
+            logging.error("%s invalid merged objects found:"
+                          % (numInvalidResults))
         else:
             logging.info("All merged objects validated")
 
@@ -780,7 +851,8 @@ def main():
                                              options.metadataSchemaFileName)
     numInvalidResults = len(validationResults["invalid"])
     if numInvalidResults != 0:
-        logging.error("%s invalid metadata objects found:" % (numInvalidResults))
+        logging.error("%s invalid metadata objects found:"
+                      % (numInvalidResults))
         for metaObj in validationResults["invalid"]:
             logging.error("INVALID: %s" % (json.dumps(metaObj)))
         sys.exit(1)
@@ -788,8 +860,10 @@ def main():
         logging.info("validated all metadata objects for output")
 
     # write metadata files and link data files
-    numFilesWritten = writeDataBundleDirs(structuredWorkflowObjMap, options.metadataOutDir)
-    logging.info("number of metadata files written: %s" % (str(numFilesWritten)))
+    numFilesWritten = writeDataBundleDirs(
+        structuredWorkflowObjMap, options.metadataOutDir)
+    logging.info("number of metadata files written: %s"
+                 % (str(numFilesWritten)))
 
     if (options.skip_upload):
         logging.info("Skipping data upload steps.")
@@ -806,16 +880,19 @@ def main():
     counts["bundlesFound"] = 0
 
     if not options.skip_submit:
-        r = requests.post(options.submissionServerUrl + "/v0/submissions", json={})
+        r = requests.post(
+            options.submissionServerUrl + "/v0/submissions", json={})
         submission_id = json.loads(r.text)["submission"]["id"]
-        logging.info("You can monitor the upload at {}/v0/submissions/{}".format(
-            options.submissionServerUrl, submission_id))
+        logging.info("You can monitor the upload at {}/v0/submissions/{}"
+                     .format(options.submissionServerUrl, submission_id))
 
     # build redwood registration manifest
-    redwood_registration_manifest = os.path.join(options.metadataOutDir, options.redwood_registration_file)
+    redwood_registration_manifest = os.path.join(
+        options.metadataOutDir, options.redwood_registration_file)
     redwood_upload_manifest = None
-    with open (redwood_registration_manifest, 'w') as registration:
-        registration.write('gnos_id\tprogram_code\tfile_path\tfile_md5\taccess\n')
+    with open(redwood_registration_manifest, 'w') as registration:
+        registration.write(
+            'gnos_id\tprogram_code\tfile_path\tfile_md5\taccess\n')
         for dir_name, subdirs, files in os.walk(options.metadataOutDir):
             if dir_name == options.metadataOutDir:
                 continue
@@ -823,21 +900,26 @@ def main():
                 continue
             if "metadata.json" in files:
                 bundleDirFullPath = os.path.join(os.getcwd(), dir_name)
-                logging.debug("found bundle directory at %s" % (bundleDirFullPath))
+                logging.debug("found bundle directory at %s"
+                              % (bundleDirFullPath))
                 counts["bundlesFound"] += 1
 
-                bundle_metadata = loadJsonObj(os.path.join(bundleDirFullPath, "metadata.json"))
+                bundle_metadata = loadJsonObj(
+                    os.path.join(bundleDirFullPath, "metadata.json"))
 
                 project = bundle_metadata["project"]
                 bundle_uuid = os.path.basename(dir_name)
                 controlled_access = True
                 if redwood_upload_manifest is None:
-                    redwood_upload_manifest = os.path.join(options.metadataOutDir, redwood_upload_manifest_dir, bundle_uuid)
+                    redwood_upload_manifest = os.path.join(
+                        options.metadataOutDir, redwood_upload_manifest_dir,
+                        bundle_uuid)
 
                 # register upload
                 for f in files:
                     file = os.path.join(dir_name, f)
-                    add_to_registration(registration, bundle_uuid, project, file, controlled_access)
+                    add_to_registration(registration, bundle_uuid, project,
+                                        file, controlled_access)
             else:
                 logging.info("no metadata file found in %s" % dir_name)
 
@@ -845,7 +927,8 @@ def main():
 
     # submit registration to metadata-server and perform upload
     mkdir_p(os.path.dirname(redwood_upload_manifest))
-    reg_success = register_upload(redwood_registration_manifest, os.path.dirname(redwood_upload_manifest))
+    reg_success = register_upload(redwood_registration_manifest,
+                                  os.path.dirname(redwood_upload_manifest))
     if reg_success:
         if not perform_upload(redwood_upload_manifest, options.force_upload):
             logging.error("redwood upload failed")
@@ -854,17 +937,19 @@ def main():
     else:
         logging.error("upload registration failed")
         sys.exit(1)
-        
+
     # generate receipt.tsv
     logging.info("now generate upload receipt")
     collected_receipts = []
     manifest_data = parseUploadManifestFile(redwood_upload_manifest)
     for dirName, subdirList, fileList in os.walk(options.metadataOutDir):
         if dirName == options.metadataOutDir \
-                or os.path.basename(dirName) == redwood_upload_manifest_dir or len(subdirList) != 0:
+                or os.path.basename(dirName) == redwood_upload_manifest_dir \
+                or len(subdirList) != 0:
             continue
         if "metadata.json" in fileList:
-            metadataFilePath = os.path.join(os.getcwd(), dirName, "metadata.json")
+            metadataFilePath = os.path.join(
+                os.getcwd(), dirName, "metadata.json")
             metadataObj = loadJsonObj(metadataFilePath)
 
             receipt_data = collectReceiptData(manifest_data, metadataObj)
@@ -882,8 +967,8 @@ def main():
             r = requests.put(options.submissionServerUrl
                              + "/v0/submissions/{}".format(submission_id),
                              json={"receipt": f.read()})
-            logging.info("You can view the receipt at {}/v0/submissions/{}".format(
-                options.submissionServerUrl, submission_id))
+            logging.info("You can view the receipt at {}/v0/submissions/{}"
+                         .format(options.submissionServerUrl, submission_id))
 
     logging.info("Upload succeeded. A detailed log is at: %s" % (logFilePath))
     runTime = getTimeDelta(startTime).total_seconds()
