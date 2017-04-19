@@ -75,7 +75,7 @@ def getOptions():
     parser.add_option("--force-upload", action="store_true", default=False,
                       dest="force_upload",
                       help="Force upload if object exists remotely. Overwrites existing bundle.")
-    parser.add_option("--skip-submit", action="store_true", default=True,
+    parser.add_option("--skip-submit", action="store_true", default=False,
                       dest="skip_submit",
                       help="Skip contacting the submission server.")
 
