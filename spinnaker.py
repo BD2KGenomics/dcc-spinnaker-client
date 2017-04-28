@@ -24,6 +24,15 @@ import semver
 import requests
 import dateutil
 import hashlib
+from functools import partial
+
+
+def md5sum(filename):
+    with open(filename, mode='rb') as f:
+        d = hashlib.md5()
+        for buf in iter(partial(f.read, 128), b''):
+            d.update(buf)
+        return d.hexdigest()
 
 
 def getValueFromObject(x, y):
@@ -506,12 +515,9 @@ def setupLogging(logfileName, logFormat, logLevel, logToConsole=True):
 
 def add_to_registration(registration, bundle_id, project, file_path,
                         controlled_access):
-    with open(file_path, 'r') as f:
-        hash = hashlib.md5()
-        hash.update(f.read())
-        access = 'controlled' if controlled_access else 'open'
-        registration.write('{}\t{}\t{}\t{}\t{}\n'.format(
-            bundle_id, project, file_path, hash.hexdigest(), access))
+    access = 'controlled' if controlled_access else 'open'
+    registration.write('{}\t{}\t{}\t{}\t{}\n'.format(
+        bundle_id, project, file_path, md5sum(file_path), access))
 
 
 def register_upload(manifest, outdir):
@@ -908,7 +914,7 @@ def main():
                 bundle_metadata = loadJsonObj(
                     os.path.join(bundleDirFullPath, "metadata.json"))
 
-                project = bundle_metadata["program"].replace(' ', '_')
+                program = bundle_metadata["program"].replace(' ', '_')
                 bundle_uuid = os.path.basename(dir_name)
                 controlled_access = True
                 if redwood_upload_manifest is None:
@@ -919,7 +925,7 @@ def main():
                 # register upload
                 for f in files:
                     file = os.path.join(dir_name, f)
-                    add_to_registration(registration, bundle_uuid, project,
+                    add_to_registration(registration, bundle_uuid, program,
                                         file, controlled_access)
             else:
                 logging.info("no metadata file found in %s" % dir_name)
