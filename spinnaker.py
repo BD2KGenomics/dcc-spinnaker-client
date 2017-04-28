@@ -797,6 +797,13 @@ def main():
         logging.error("no input files")
         sys.exit(1)
 
+    for dirName, subdirList, fileList in os.walk(options.metadataOutDir):
+        if 'metadata.json' in fileList:
+            logging.error("bundles from previous upload found in {}. Please"
+                          " use a fresh directory".format(
+                              options.metadataOutDir))
+            sys.exit(1)
+
     if options.verbose:
         logLevel = logging.DEBUG
     else:
