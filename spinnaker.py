@@ -40,11 +40,9 @@ def getOptions():
     """
     usage_text = []
     usage_text.append("%prog [options] [input Excel or tsv files]")
-    usage_text.append("Data will be read from 'Sheet1' in the case of Excel "
-                      "file.")
 
     description_text = []
-    description_text.append("Upload client for UCSC DCC")
+    description_text.append("Upload client for Analysis Core")
     description_text.append("Performs the following operations:")
     description_text.append("1 Generates data bundles for the input files")
     description_text.append("2 Validates the metadata generates")
@@ -52,6 +50,9 @@ def getOptions():
     description_text.append("4 Uploads the files")
     description_text.append("5 Returns receipt with UUIDs for all uploaded"
                             "files")
+
+    usage_text.append("Data will be read from 'Sheet1' in the case of Excel "
+                      "file.")
 
     parser = OptionParser(usage="\n".join(usage_text), description="\n"
                           .join(description_text))
@@ -72,9 +73,9 @@ def getOptions():
                       help="flattened json schema file for metadata")
     parser.add_option("--registration-file", action="store",
                       default="registration.tsv", type="string",
-                      dest="redwood_registration_file", help="file to write "
-                      "Redwood metadata upload registration manifest in. "
-                      "Existing file will be overwritten.")
+                      dest="redwood_registration_file", help="file where "
+                      "Redwood metadata upload registration manifest will be "
+                      "written in. Existing file will be overwritten.")
     parser.add_option("-d", "--output-dir", action="store", default="/outputs",
                       type="string",
                       dest="metadataOutDir",
@@ -907,7 +908,7 @@ def main():
                 bundle_metadata = loadJsonObj(
                     os.path.join(bundleDirFullPath, "metadata.json"))
 
-                project = bundle_metadata["project"]
+                project = bundle_metadata["program"].replace(' ', '_')
                 bundle_uuid = os.path.basename(dir_name)
                 controlled_access = True
                 if redwood_upload_manifest is None:
