@@ -24,6 +24,15 @@ import semver
 import requests
 import dateutil
 import hashlib
+from functools import partial
+
+
+def md5sum(filename):
+    with open(filename, mode='rb') as f:
+        d = hashlib.md5()
+        for buf in iter(partial(f.read, 128), b''):
+            d.update(buf)
+        return d.hexdigest()
 
 
 def getValueFromObject(x, y):
@@ -40,11 +49,9 @@ def getOptions():
     """
     usage_text = []
     usage_text.append("%prog [options] [input Excel or tsv files]")
-    usage_text.append("Data will be read from 'Sheet1' in the case of Excel "
-                      "file.")
 
     description_text = []
-    description_text.append("Upload client for UCSC DCC")
+    description_text.append("Upload client for Analysis Core")
     description_text.append("Performs the following operations:")
     description_text.append("1 Generates data bundles for the input files")
     description_text.append("2 Validates the metadata generates")
@@ -52,6 +59,9 @@ def getOptions():
     description_text.append("4 Uploads the files")
     description_text.append("5 Returns receipt with UUIDs for all uploaded"
                             "files")
+
+    usage_text.append("Data will be read from 'Sheet1' in the case of Excel "
+                      "file.")
 
     parser = OptionParser(usage="\n".join(usage_text), description="\n"
                           .join(description_text))
@@ -72,9 +82,9 @@ def getOptions():
                       help="flattened json schema file for metadata")
     parser.add_option("--registration-file", action="store",
                       default="registration.tsv", type="string",
-                      dest="redwood_registration_file", help="file to write "
-                      "Redwood metadata upload registration manifest in. "
-                      "Existing file will be overwritten.")
+                      dest="redwood_registration_file", help="file where "
+                      "Redwood metadata upload registration manifest will be "
+                      "written in. Existing file will be overwritten.")
     parser.add_option("-d", "--output-dir", action="store", default="/outputs",
                       type="string",
                       dest="metadataOutDir",
@@ -505,12 +515,9 @@ def setupLogging(logfileName, logFormat, logLevel, logToConsole=True):
 
 def add_to_registration(registration, bundle_id, project, file_path,
                         controlled_access):
-    with open(file_path, 'r') as f:
-        hash = hashlib.md5()
-        hash.update(f.read())
-        access = 'controlled' if controlled_access else 'open'
-        registration.write('{}\t{}\t{}\t{}\t{}\n'.format(
-            bundle_id, project, file_path, hash.hexdigest(), access))
+    access = 'controlled' if controlled_access else 'open'
+    registration.write('{}\t{}\t{}\t{}\t{}\n'.format(
+        bundle_id, project, file_path, md5sum(file_path), access))
 
 
 def register_upload(manifest, outdir):
@@ -790,6 +797,13 @@ def main():
         logging.error("no input files")
         sys.exit(1)
 
+    for dirName, subdirList, fileList in os.walk(options.metadataOutDir):
+        if 'metadata.json' in fileList:
+            logging.error("bundles from previous upload found in {}. Please"
+                          " use a fresh directory".format(
+                              options.metadataOutDir))
+            sys.exit(1)
+
     if options.verbose:
         logLevel = logging.DEBUG
     else:
@@ -907,7 +921,7 @@ def main():
                 bundle_metadata = loadJsonObj(
                     os.path.join(bundleDirFullPath, "metadata.json"))
 
-                project = bundle_metadata["project"]
+                program = bundle_metadata["program"].replace(' ', '_')
                 bundle_uuid = os.path.basename(dir_name)
                 controlled_access = True
                 if redwood_upload_manifest is None:
@@ -918,7 +932,7 @@ def main():
                 # register upload
                 for f in files:
                     file = os.path.join(dir_name, f)
-                    add_to_registration(registration, bundle_uuid, project,
+                    add_to_registration(registration, bundle_uuid, program,
                                         file, controlled_access)
             else:
                 logging.info("no metadata file found in %s" % dir_name)
