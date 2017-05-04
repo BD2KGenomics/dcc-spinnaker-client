@@ -2,7 +2,7 @@ VERSION = 1.1.0-alpha
 
 build:
 	docker build -t dcc-spinnaker-client .
-	docker tag dcc-spinnaker-client core-client:$(VERSION)
+	docker tag dcc-spinnaker-client quay.io/ucsc_cgl/core-client:$(VERSION)
 
 upload: clean
 	docker run -it --rm \
