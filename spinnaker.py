@@ -27,6 +27,14 @@ import hashlib
 from functools import partial
 
 
+def sha1sum(filename):
+    with open(filename, mode='rb') as f:
+        d = hashlib.sha1()
+        for buf in iter(partial(f.read, 128), b''):
+            d.update(buf)
+        return 'sha1$' + d.hexdigest()
+
+
 def md5sum(filename):
     with open(filename, mode='rb') as f:
         d = hashlib.md5()
@@ -436,6 +444,8 @@ def getWorkflowObjects(flatMetadataObjs):
         wf_outputsObj.append(fileInfoObj)
         fileInfoObj["file_type"] = metaObj["file_type"]
         fileInfoObj["file_path"] = metaObj["file_path"]
+        fileInfoObj["file_size"] = os.path.getsize(metaObj["file_path"])
+        fileInfoObj["file_sha"] = sha1sum(metaObj["file_path"])
 
     return commonObjMap
 
