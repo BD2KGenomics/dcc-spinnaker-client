@@ -29,7 +29,8 @@ from tqdm import tqdm
 
 
 def sha1sum(filename):
-    logging.info("Calculating the sha1 sum. Please stand by...")
+    logging.info("Calculating the sha1 sum for {}. Please \
+        stand by...".format(os.path.basename(filename)))
     filesize = os.path.getsize(filename)
     with open(filename, mode='rb') as f:
         d = hashlib.sha1()
@@ -42,7 +43,8 @@ def sha1sum(filename):
 
 
 def md5sum(filename):
-    logging.info("Calculating the md5 checksum. Please stand by...")
+    logging.info("Calculating the md5 checksum for {}. Please \
+        stand by...".format(os.path.basename(filename)))
     filesize = os.path.getsize(filename)
     with open(filename, mode='rb') as f:
         d = hashlib.md5()
