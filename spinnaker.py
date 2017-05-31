@@ -26,6 +26,7 @@ import dateutil
 import hashlib
 from functools import partial
 from tqdm import tqdm
+from fcntl import fcntl, F_GETFL, F_SETFL
 
 
 def sha1sum(filename):
@@ -589,11 +590,19 @@ def perform_upload(manifest, force):
 #            sys.stdout.write(output)
 #            sys.stdout.flush()
 #    return success
+    flags = fcntl(process.stderr, F_GETFL)
+    fcntl(process.stderr, F_SETFL, flags | os.O_NONBLOCK)
     while process.poll() is None:
-        output = process.stderr.read(1)
-        if output:
-            sys.stdout.write(output)
-            sys.stdout.flush()
+        #output = process.stderr.read(process.stderr.fileno(), 1024)
+#        output = os.read(process.stderr.fileno(), 1024)
+#        if output:
+#            sys.stdout.write(output)
+#            sys.stdout.flush()
+        try:
+             sys.stdout.write(os.read(process.stderr.fileno(), 1024))
+             sys.stdout.flush()
+        except:
+             continue
     success = False if process.returncode != 0 else True
     return success
 
