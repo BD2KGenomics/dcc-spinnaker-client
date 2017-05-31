@@ -25,21 +25,35 @@ import requests
 import dateutil
 import hashlib
 from functools import partial
+from tqdm import tqdm
 
 
 def sha1sum(filename):
+    logging.info("Calculating the sha1 sum for {}.".format(
+        os.path.basename(filename)))
+    filesize = os.path.getsize(filename)
     with open(filename, mode='rb') as f:
         d = hashlib.sha1()
-        for buf in iter(partial(f.read, 128), b''):
-            d.update(buf)
+        with tqdm(total=filesize, unit='B', unit_scale=True) as pbar:
+            for buf in iter(partial(f.read, 128), b''):
+                d.update(buf)
+                pbar.update(len(buf))
+        logging.info("sha1 sum done for {}".format(os.path.basename(filename)))
         return 'sha1$' + d.hexdigest()
 
 
 def md5sum(filename):
+    logging.info("Calculating the md5 checksum for {}.".format(
+        os.path.basename(filename)))
+    filesize = os.path.getsize(filename)
     with open(filename, mode='rb') as f:
         d = hashlib.md5()
-        for buf in iter(partial(f.read, 128), b''):
-            d.update(buf)
+        with tqdm(total=filesize, unit='B', unit_scale=True) as pbar:
+            for buf in iter(partial(f.read, 128), b''):
+                d.update(buf)
+                pbar.update(len(buf))
+        logging.info("md5 checksum done for {}".format(
+            os.path.basename(filename)))
         return d.hexdigest()
 
 

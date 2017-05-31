@@ -6,3 +6,4 @@ openpyxl==2.4.0
 python-dateutil==2.6.0
 requests==2.12.1
 semver==2.7.2
+tqdm==4.11.2
