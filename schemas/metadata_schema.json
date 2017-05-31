@@ -48,10 +48,12 @@
                     "$ref": "#/definitions/uuid"
                 },
                 "workflow_name": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1
                 },
                 "workflow_version": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1
                 },
                 "timestamp": {
                     "description": "We want this time stamp in detached analysis data, but not required when uploading via upload tool.",
@@ -64,10 +66,12 @@
                         "required": ["file_path", "file_type"],
                         "properties": {
                             "file_path": {
-                                "type": "string"
+                                "type": "string",
+                                "minLength": 1
                             },
                             "file_type": {
-                                "type": "string"
+                                "type": "string",
+                                "minLength": 1
                             },
                             "file_uuid": {
                                 "$ref": "#/definitions/uuid"
@@ -104,16 +108,20 @@
             "$ref": "#/definitions/time_stamp"
         },
         "program": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
         },
         "project": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
         },
         "center_name": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
         },
         "submitter_donor_id": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
         },
         "donor_uuid": {
             "$ref": "#/definitions/uuid"
@@ -128,7 +136,8 @@
                 "required": ["submitter_specimen_id", "specimen_uuid", "submitter_specimen_type", "samples"],
                 "properties": {
                     "submitter_specimen_id": {
-                        "type": "string"
+                        "type": "string",
+                        "minLength": 1
                     },
                     "specimen_uuid": {
                         "$ref": "#/definitions/uuid"
@@ -136,9 +145,10 @@
                     "submitter_specimen_type": {
                         "$ref": "#/definitions/specimen_type"
                     },
-            "submitter_experimental_design": {
-            "type": "string"
-            },
+                    "submitter_experimental_design": {
+                        "type": "string",
+                        "minLength": 1
+                    },
                     "samples": {
                         "type": "array",
                         "items": {
@@ -146,7 +156,8 @@
                             "required": ["submitter_sample_id", "sample_uuid", "analysis"],
                             "properties": {
                                 "submitter_sample_id": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "minLength": 1
                                 },
                                 "sample_uuid": {
                                     "$ref": "#/definitions/uuid"

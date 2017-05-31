@@ -63,7 +63,7 @@ def getValueFromObject(x, y):
     Returns a value from a dictionary x if present. Otherwise returns an empty
     string
     """
-    return x[y] if y in x else ""
+    return x[y] if y in x else ''
 
 
 def getOptions():

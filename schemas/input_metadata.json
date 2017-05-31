@@ -32,7 +32,8 @@
             "type": "string"
         },
 	"submitter_experimental_design": {
-	    "type": "string"
+	    "type": "string",
+            "minLength": 1
 	},
         "submitter_sample_id": {
             "type": "string"
