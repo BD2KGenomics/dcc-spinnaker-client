@@ -978,7 +978,7 @@ def main():
                 bundle_metadata = loadJsonObj(
                     os.path.join(bundleDirFullPath, "metadata.json"))
 
-                program = bundle_metadata["program"].replace(' ', '_')
+                program = bundle_metadata["program"].strip().replace(' ', '_')
                 bundle_uuid = os.path.basename(dir_name)
                 controlled_access = True
                 if redwood_upload_manifest is None:
