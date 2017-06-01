@@ -26,6 +26,7 @@ import dateutil
 import hashlib
 from functools import partial
 from tqdm import tqdm
+from fcntl import fcntl, F_GETFL, F_SETFL
 
 
 def sha1sum(filename):
@@ -62,7 +63,7 @@ def getValueFromObject(x, y):
     Returns a value from a dictionary x if present. Otherwise returns an empty
     string
     """
-    return x[y] if y in x else ""
+    return x[y] if y in x else ''
 
 
 def getOptions():
@@ -564,14 +565,31 @@ def perform_upload(manifest, force):
     f = '--force' if force else ''
     command = "icgc-storage-client upload --manifest {} {}".format(manifest, f)
     logging.info("performing upload: {}".format(command))
-    try:
-        subprocess.check_output(command, cwd=os.getcwd(),
-                                stderr=subprocess.STDOUT, shell=True)
-    except subprocess.CalledProcessError as exc:
-        success = False
-        logging.error("error while uploading files")
-        writeJarExceptionsToLog(exc.output)
-    return success
+    process = subprocess.Popen(command,
+                               cwd=os.getcwd(),
+                               stderr=subprocess.PIPE,
+                               shell=True)
+    flags = fcntl(process.stderr, F_GETFL)
+    fcntl(process.stderr, F_SETFL, flags | os.O_NONBLOCK)
+    while process.poll() is None:
+        try:
+            sys.stdout.write(os.read(process.stderr.fileno(), 1024))
+            sys.stdout.flush()
+        except:
+            continue
+    results = process.communicate()
+    success = False if process.returncode != 0 else True
+    if success:
+        return success
+    else:
+        try:
+            raise subprocess.CalledProcessError(process.returncode,
+                                                command,
+                                                output=results[1])
+        except subprocess.CalledProcessError as exc:
+            logging.error("error while uploading files")
+            writeJarExceptionsToLog(exc.output)
+        return success
 
 
 def writeJarExceptionsToLog(errorOutput):
@@ -945,7 +963,7 @@ def main():
                 bundle_metadata = loadJsonObj(
                     os.path.join(bundleDirFullPath, "metadata.json"))
 
-                program = bundle_metadata["program"].replace(' ', '_')
+                program = bundle_metadata["program"].strip().replace(' ', '_')
                 bundle_uuid = os.path.basename(dir_name)
                 controlled_access = True
                 if redwood_upload_manifest is None:
