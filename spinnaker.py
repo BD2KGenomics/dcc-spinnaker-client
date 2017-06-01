@@ -565,46 +565,31 @@ def perform_upload(manifest, force):
     f = '--force' if force else ''
     command = "icgc-storage-client upload --manifest {} {}".format(manifest, f)
     logging.info("performing upload: {}".format(command))
-#    try:
-#        subprocess.check_output(command, cwd=os.getcwd(),
-#                                stderr=subprocess.STDOUT, shell=True)
-#    except subprocess.CalledProcessError as exc:
-#        success = False
-#        logging.error("error while uploading files")
-#        writeJarExceptionsToLog(exc.output)
-#    try:
     process = subprocess.Popen(command,
                                cwd=os.getcwd(),
                                stderr=subprocess.PIPE,
                                shell=True)
-#    except Exception as exc:
-#        success = False
-#        logging.error("error while uploading files")
-#        writeJarExceptionsToLog(str(exc))
-#        return success
-#    while True:
-#        output = process.stderr.readline()
-#        if output == '' and process.poll() is not None:
-#            break
-#        if output:
-#            sys.stdout.write(output)
-#            sys.stdout.flush()
-#    return success
     flags = fcntl(process.stderr, F_GETFL)
     fcntl(process.stderr, F_SETFL, flags | os.O_NONBLOCK)
     while process.poll() is None:
-        #output = process.stderr.read(process.stderr.fileno(), 1024)
-#        output = os.read(process.stderr.fileno(), 1024)
-#        if output:
-#            sys.stdout.write(output)
-#            sys.stdout.flush()
         try:
-             sys.stdout.write(os.read(process.stderr.fileno(), 1024))
-             sys.stdout.flush()
+            sys.stdout.write(os.read(process.stderr.fileno(), 1024))
+            sys.stdout.flush()
         except:
-             continue
+            continue
+    results = process.communicate()
     success = False if process.returncode != 0 else True
-    return success
+    if success:
+        return success
+    else:
+        try:
+            raise subprocess.CalledProcessError(process.returncode,
+                                                command,
+                                                output=results[1])
+        except subprocess.CalledProcessError as exc:
+            logging.error("error while uploading files")
+            writeJarExceptionsToLog(exc.output)
+        return success
 
 
 def writeJarExceptionsToLog(errorOutput):
