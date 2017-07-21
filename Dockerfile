@@ -1,4 +1,4 @@
-FROM quay.io/ucsc_cgl/redwood-client:1.1.1
+FROM quay.io/ucsc_cgl/redwood-client:1.2.1
 
 RUN apt-get update && apt-get install -y  python python-pip
 RUN pip install --upgrade pip
