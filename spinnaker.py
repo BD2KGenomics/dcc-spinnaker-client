@@ -573,8 +573,14 @@ def perform_upload(manifest, force):
     fcntl(process.stderr, F_SETFL, flags | os.O_NONBLOCK)
     while process.poll() is None:
         try:
-            sys.stdout.write(os.read(process.stderr.fileno(), 1024))
-            sys.stdout.flush()
+            try:
+                process_msg = os.read(process.stderr.fileno(), 1024).strip()
+                if 'ERROR' in process_msg:
+                    logging.error(process_msg)
+                elif process_msg:
+                    logging.info(process_msg)
+            except:
+                continue
         except:
             continue
     results = process.communicate()
