@@ -577,7 +577,8 @@ def perform_upload(manifest, force):
             if 'ERROR' in process_msg:
                 logging.error(process_msg)
             elif process_msg:
-                logging.info(process_msg)
+                sys.stdout.write(process_msg)
+                sys.stdout.flush()
         except:
             continue
     results = process.communicate()
