@@ -573,10 +573,10 @@ def perform_upload(manifest, force):
     fcntl(process.stderr, F_SETFL, flags | os.O_NONBLOCK)
     while process.poll() is None:
         try:
-            process_msg = os.read(process.stderr.fileno(), 1024).strip()
+            process_msg = os.read(process.stderr.fileno(), 1024)
             if 'ERROR' in process_msg:
                 logging.error(process_msg)
-            elif process_msg:
+            elif process_msg.strip():
                 sys.stdout.write(process_msg)
                 sys.stdout.flush()
         except:
