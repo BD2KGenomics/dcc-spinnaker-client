@@ -254,7 +254,15 @@ def setUuids(dataObj):
     Uses uuid.uuid5().
     """
     keyFieldsMapping = {}
-    keyFieldsMapping["donor_uuid"] = ["center_name", "submitter_donor_id"]
+#    keyFieldsMapping["donor_uuid"] = ["center_name", "submitter_donor_id"]
+    #Include 'project', 'program', submitter_donor_primary_site', 
+    #which are all at the same level in the metadata,
+    #when creating donor uuid, so that when donors with the same
+    #center name and submitter donor id are merged, donors under different projects 
+    #or program, or project or submitter_donor_primary_site aren't merged together
+    keyFieldsMapping["donor_uuid"] = ["program", "center_name", "submitter_donor_id", "project", \
+                                      "submitter_donor_primary_site"]
+
 
     keyFieldsMapping["specimen_uuid"] = list(keyFieldsMapping["donor_uuid"])
     keyFieldsMapping["specimen_uuid"].append("submitter_specimen_id")
