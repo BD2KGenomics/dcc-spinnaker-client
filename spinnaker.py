@@ -27,7 +27,9 @@ import hashlib
 from functools import partial
 from tqdm import tqdm
 from fcntl import fcntl, F_GETFL, F_SETFL
-
+from urllib import urlopen
+import ssl
+import pprint
 
 def sha1sum(filename):
     logging.info("Calculating the sha1 sum for {}.".format(
@@ -898,6 +900,27 @@ def main():
                 continue
 
             flatMetadataObjs.append(metaObj)
+
+    redwood_host = os.environ['REDWOOD_ENDPOINT']
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    has_existing_bundle_id = False
+
+    # Checks if bundle_id/gnos_id exists in the
+    for fmo in flatMetadataObjs:
+        metadata_url = "https://metadata.{}/entities?gnosId={}".format(redwood_host, fmo['workflow_uuid'])
+        file_name_metadata_json = urlopen(metadata_url, context=ctx).read()
+        file_name_metadata = json.loads(file_name_metadata_json)
+        # pprint.pprint(file_name_metadata)
+        if file_name_metadata['totalElements'] > 0:
+            logging.error("Found row in manifest with the same sample_uuid, workflow_name, and workflow_version in the database.\n"
+                          "Please update the workflow version of that row.")
+            logging.error("Reference file metadata:\n{}\n\n".format(pprint.pformat(file_name_metadata)))
+            has_existing_bundle_id = True
+
+    if has_existing_bundle_id:
+        sys.exit(1)
 
     # get structured workflow objects
     structuredWorkflowObjMap = getWorkflowObjects(flatMetadataObjs)
