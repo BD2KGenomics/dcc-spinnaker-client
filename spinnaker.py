@@ -940,13 +940,13 @@ def main():
         if file_name_metadata['totalElements'] > 0:
             existing_bundles.append(fmo)
 
-    # If atleast a single row contains a bundle_uuid/gnos_uuid/workflow_uuid exists in storage system, the duplicate
+    # If at least a single row contains a bundle_uuid/gnos_uuid/workflow_uuid exists in storage system, the duplicate
     # bundle id error is logged, a list of duplicate bundles is shown, and the whole upload process is stopped.
     if existing_bundles:
         table_str = change_dict_list_to_table_str(existing_bundles, bundle_err_tbl_cols)
         logging.error("\nUpload was interrupted because the following row(s) contain data that already has been "
                       "uploaded."
-                      "\nTo upload again, please find the row(s) thats match the data below and bump up the workflow"
+                      "\nTo upload again, please find the row(s) that match(es) the data below and bump up the workflow"
                       " version for the following row(s) and re-upload."
                       "\nNO DATA WAS UPLOADED."
                       "\n\nBundles already in System\n=========\n{}\n".format(table_str))
