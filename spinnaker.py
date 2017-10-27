@@ -27,7 +27,9 @@ import hashlib
 from functools import partial
 from tqdm import tqdm
 from fcntl import fcntl, F_GETFL, F_SETFL
-
+from urllib import urlopen
+import ssl
+import pprint
 
 def sha1sum(filename):
     logging.info("Calculating the sha1 sum for {}.".format(
@@ -842,6 +844,23 @@ def mergeDonors(metadataObjs):
     return donorMapping
 
 
+def change_dict_list_to_table_str(dict_list, columns_fields, margin_size=2):
+    """
+        turns a list of dictionaries, into a string that can printed as a readable table
+    """
+
+    # Creates a list of the largest string's lengths + the margin size of each column in the table
+    largest_sizes = [max([len(ud_values[cf]) for ud_values in dict_list]) + margin_size for cf in columns_fields]
+
+    # Creates a string format pattern based on the largest sizes, so the columns are spaced neatly
+    format_pattern = " ".join(["{:" + str(s) + "s}" for s in largest_sizes])
+
+    # Creates the table string using the format pattern and the dict_list
+    table_str = "\n".join([format_pattern.format(*[row[field] for field in columns_fields]) for row in dict_list])
+
+    return table_str
+
+
 def main():
     startTime = getNow()
     (options, args, parser) = getOptions()
@@ -898,6 +917,40 @@ def main():
                 continue
 
             flatMetadataObjs.append(metaObj)
+
+    redwood_host = os.environ['REDWOOD_ENDPOINT']
+    bundle_err_tbl_cols = ['program', 'project', 'center_name', 'submitter_donor_id',
+                           'submitter_donor_primary_site', 'submitter_specimen_id', 'submitter_sample_id',
+                           'workflow_name', 'workflow_version', 'file_path']
+
+    # Context hack for accessing the metadata api
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    existing_bundles = []
+
+    # Checks if the bundle uuids generated from the manifest file are already in the storage system.
+    # The bundle_ids are also called workflow uuids and gnos ids.
+    for fmo in flatMetadataObjs:
+        mtadta_dict_copy = fmo.copy()
+        metadata_url = "https://metadata.{}/entities?gnosId={}".format(redwood_host, mtadta_dict_copy['workflow_uuid'])
+        file_name_metadata_json = urlopen(metadata_url, context=ctx).read()
+        file_name_metadata = json.loads(file_name_metadata_json)
+        if file_name_metadata['totalElements'] > 0:
+            existing_bundles.append(fmo)
+
+    # If at least a single row contains a bundle_uuid/gnos_uuid/workflow_uuid exists in storage system, the duplicate
+    # bundle id error is logged, a list of duplicate bundles is shown, and the whole upload process is stopped.
+    if existing_bundles:
+        table_str = change_dict_list_to_table_str(existing_bundles, bundle_err_tbl_cols)
+        logging.error("\nUpload was interrupted because the following row(s) contain data that already has been "
+                      "uploaded."
+                      "\nTo upload again, please find the row(s) that match(es) the data below and bump up the workflow"
+                      " version for the following row(s) and re-upload."
+                      "\nNO DATA WAS UPLOADED."
+                      "\n\nBundles already in System\n=========\n{}\n".format(table_str))
+        sys.exit(1)
 
     # get structured workflow objects
     structuredWorkflowObjMap = getWorkflowObjects(flatMetadataObjs)
