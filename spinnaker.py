@@ -860,54 +860,17 @@ def change_dict_list_to_table_str(dict_list, columns_fields, margin_size=2):
 
     return table_str
 
+# Validates if a metadata obj or manifest row is valid
+def is_metadata_obj_valid(metadata_obj):
+    if not metadata_obj:
+        return False
 
-def validate_metadata(metadata_objects):
-    redwood_host = os.environ['REDWOOD_ENDPOINT']
-    bundle_err_tbl_cols = ['program', 'project', 'center_name', 'submitter_donor_id',
-                           'submitter_donor_primary_site', 'submitter_specimen_id', 'submitter_sample_id',
-                           'workflow_name', 'workflow_version', 'file_path']
+    # Checks if the file in metadata obj has a size greater than zero. If not, the row will be skipped.
+    if not os.path.getsize(metadata_obj['file_path']):
+        logging.error("The file, '{}', is empty. This file will be skipped.".format(metadata_obj['file_path']))
+        return False
 
-    # Context hack for accessing the metadata api
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-
-    existing_bundles = []
-    zero_size_filenames = []
-    manifest_errors = ""
-
-    # Checks if the bundle uuids generated from the manifest file are already in the storage system.
-    # The bundle_ids are also called workflow uuids and gnos ids.
-    for mta_obj in metadata_objects:
-        metadata_url = "https://metadata.{}/entities?gnosId={}".format(redwood_host, mta_obj['workflow_uuid'])
-        file_name_metadata_json = urlopen(metadata_url, context=ctx).read()
-        file_name_metadata = json.loads(file_name_metadata_json)
-        if file_name_metadata['totalElements'] > 0:
-            existing_bundles.append(mta_obj)
-
-    # If at least a single row contains a bundle_uuid/gnos_uuid/workflow_uuid exists in storage system, the duplicate
-    # bundle id error is logged, a list of duplicate bundles is shown, and the whole upload process is stopped.
-    if existing_bundles:
-        table_str = change_dict_list_to_table_str(existing_bundles, bundle_err_tbl_cols)
-        manifest_errors += "\nUpload was interrupted because the following row(s) contain data that already has been " \
-                           "uploaded." \
-                           "\nTo upload again, please find the row(s) that match(es) the data below and bump up the " \
-                           "workflow version for the following row(s) and re-upload." \
-                           "\nNO DATA WAS UPLOADED." \
-                           "\n\nBundles already in System\n=========\n{}\n".format(table_str)
-
-    for mta_obj in metadata_objects:
-        if not os.path.getsize(mta_obj['file_path']):
-            zero_size_filenames.append(mta_obj['file_path'])
-
-    if zero_size_filenames:
-        manifest_errors += "\nThere are zero-byte file(s) listed in the manifest. Please make sure the following are the" \
-                           " correct files." \
-                           "\n\nZero byte files\n=========\n{}\n".format("\n".join(zero_size_filenames))
-
-    if manifest_errors:
-        logging.error(manifest_errors)
-        sys.exit(1)
+    return True
 
 
 def main():
@@ -962,12 +925,47 @@ def main():
         for data in fileDataList:
             metaObj = getDataObj(data, inputMetadataSchema)
 
-            if metaObj is None:
-                continue
+            if is_metadata_obj_valid(metaObj):
+                flatMetadataObjs.append(metaObj)
 
-            flatMetadataObjs.append(metaObj)
+    # Checks if the any row in manifest passed validatation. If not, the upload is canceled.
+    if len(flatMetadataObjs) <= 0:
+        logging.error("No rows in the manifest have valid data. Please check your manifest again.")
+        sys.exit(1)
 
-    validate_metadata(flatMetadataObjs)
+    redwood_host = os.environ['REDWOOD_ENDPOINT']
+    bundle_err_tbl_cols = ['program', 'project', 'center_name', 'submitter_donor_id',
+                           'submitter_donor_primary_site', 'submitter_specimen_id', 'submitter_sample_id',
+                           'workflow_name', 'workflow_version', 'file_path']
+
+    # Context hack for accessing the metadata api
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    existing_bundles = []
+
+    # Checks if the bundle uuids generated from the manifest file are already in the storage system.
+    # The bundle_ids are also called workflow uuids and gnos ids.
+    for fmo in flatMetadataObjs:
+        mtadta_dict_copy = fmo.copy()
+        metadata_url = "https://metadata.{}/entities?gnosId={}".format(redwood_host, mtadta_dict_copy['workflow_uuid'])
+        file_name_metadata_json = urlopen(metadata_url, context=ctx).read()
+        file_name_metadata = json.loads(file_name_metadata_json)
+        if file_name_metadata['totalElements'] > 0:
+            existing_bundles.append(fmo)
+
+    # If at least a single row contains a bundle_uuid/gnos_uuid/workflow_uuid exists in storage system, the duplicate
+    # bundle id error is logged, a list of duplicate bundles is shown, and the whole upload process is stopped.
+    if existing_bundles:
+        table_str = change_dict_list_to_table_str(existing_bundles, bundle_err_tbl_cols)
+        logging.error("\nUpload was interrupted because the following row(s) contain data that already has been "
+                      "uploaded."
+                      "\nTo upload again, please find the row(s) that match(es) the data below and bump up the workflow"
+                      " version for the following row(s) and re-upload."
+                      "\nNO DATA WAS UPLOADED."
+                      "\n\nBundles already in System\n=========\n{}\n".format(table_str))
+        sys.exit(1)
 
     # get structured workflow objects
     structuredWorkflowObjMap = getWorkflowObjects(flatMetadataObjs)
