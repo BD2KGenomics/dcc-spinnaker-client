@@ -29,7 +29,8 @@ from tqdm import tqdm
 from fcntl import fcntl, F_GETFL, F_SETFL
 from urllib import urlopen
 import ssl
-import pprint
+import shutil
+
 
 def sha1sum(filename):
     logging.info("Calculating the sha1 sum for {}.".format(
@@ -67,6 +68,10 @@ def getValueFromObject(x, y):
     """
     return x[y] if y in x else ''
 
+ROOT_OUTPUT_FOLDER = 'outputs'
+FOLDER_PATTERN = 'spinnaker_{}-UTC'.format(datetime.datetime.now().strftime(
+    "%Y-%m-%d_%H-%M-%S"))
+OUTPUT_DIRECTORY = os.path.join("/", ROOT_OUTPUT_FOLDER, FOLDER_PATTERN)
 
 def getOptions():
     """
@@ -110,7 +115,8 @@ def getOptions():
                       dest="redwood_registration_file", help="file where "
                       "Redwood metadata upload registration manifest will be "
                       "written in. Existing file will be overwritten.")
-    parser.add_option("-d", "--output-dir", action="store", default="/outputs",
+    parser.add_option("-d", "--output-dir", action="store",
+                      default=OUTPUT_DIRECTORY,
                       type="string",
                       dest="metadataOutDir",
                       help="output directory. Existing files will be "
@@ -861,6 +867,13 @@ def change_dict_list_to_table_str(dict_list, columns_fields, margin_size=2):
     return table_str
 
 
+DCC_HOME_DIR = os.environ.get("DCC_HOME", "~/dcc")
+DCC_META_LOGFILE = "dcc-metadata-client.log"
+ICGC_LOGFILE = "icgc-storage-client.log"
+ICGC_LOG_DIR = "{}/icgc-storage-client/logs".format(DCC_HOME_DIR)
+METADATA_CLIENT_DIR = "{}/dcc-metadata-client/logs".format(DCC_HOME_DIR)
+
+
 def main():
     startTime = getNow()
     (options, args, parser) = getOptions()
@@ -1095,6 +1108,10 @@ def main():
     runTime = getTimeDelta(startTime).total_seconds()
     logging.info("Upload took %s s." % str(runTime))
     logging.shutdown()
+    shutil.copyfile("{}/{}".format(ICGC_LOG_DIR, ICGC_LOGFILE),
+                    "{}/{}".format(options.metadataOutDir, ICGC_LOGFILE))
+    shutil.copyfile("{}/{}".format(METADATA_CLIENT_DIR, DCC_META_LOGFILE),
+                    "{}/{}".format(options.metadataOutDir, DCC_META_LOGFILE))
     return None
 
 
